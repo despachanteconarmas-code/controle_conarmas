@@ -1,0 +1,42 @@
+# Dependências
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Build
+dist
+dist-ssr
+
+# Ambiente
+.env
+.env.local
+.env.production
+.env.development
+*.local
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentação
+README.md
+*.md
+docs
+
+# Testes
+coverage
+.nyc_output
+
+# Supabase local
+supabase/.branches
+supabase/.temp
+.vercel

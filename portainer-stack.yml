@@ -1,0 +1,105 @@
+version: "3.7"
+
+# Definição dos Serviços
+services:
+  # Serviço do Conarmas OS Manager
+  conarmas_os_manager:
+    # Imagem do docker (você vai buildar e fazer push para um registry)
+    image: seu-registry/conarmas-os-manager:latest
+
+    # Define o hostname do container
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    # Configura a rede do serviço
+    networks:
+      - network_swarm_public
+
+    # Configura as variáveis de ambiente
+    environment:
+      #########################################################
+      # Configuração do Supabase ##############################
+      #########################################################
+      # URL do projeto Supabase
+      - VITE_SUPABASE_URL=https://utwujmzfwpyixczstdjw.supabase.co
+      # Chave pública (anon key) do Supabase
+      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV0d3VqbXpmd3B5aXhjenN0ZGp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2MDUyMTYsImV4cCI6MjA3MDE4MTIxNn0.W5M3VRFRY6vFsYV44x2pJy0AJ3QerS_8V7gwknvzqpM
+      # Ambiente de execução
+      - NODE_ENV=production
+
+    # Configura o Modo de Deploy da Aplicação
+    deploy:
+      # O serviço será executado no modo de replicação
+      mode: replicated
+      # Vamos ter apenas uma instância
+      replicas: 1
+      # Configura o local de execução
+      placement:
+        constraints:
+          # Pode rodar em qualquer worker ou manager
+          - node.role == worker
+          # OU especifique um hostname específico:
+          # - node.hostname == worker1
+      # Limitação de recursos
+      resources:
+        # Definição dos Limites de Recursos deste Serviço
+        limits:
+          # Define a quantidade de CPU para evitar travamento do Host
+          cpus: "0.5"
+          # Define a quantidade de RAM para evitar travamento do Host
+          memory: 512M
+        # Reserva mínima de recursos
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      # Define os Labels do Serviço para o Traefik
+      labels:
+        # Habilita o Traefik
+        - traefik.enable=true
+
+        # Configuração do Router
+        # IMPORTANTE: Substitua 'os.conarmas.com.br' pelo seu domínio
+        - traefik.http.routers.conarmas_os.rule=Host(`os.conarmas.com.br`)
+
+        # Redireciona o endereço para HTTPS
+        - traefik.http.routers.conarmas_os.entrypoints=websecure
+
+        # Define o certificado SSL (Let's Encrypt)
+        - traefik.http.routers.conarmas_os.tls.certresolver=letsencryptresolver
+
+        # Define o serviço
+        - traefik.http.routers.conarmas_os.service=conarmas_os
+
+        # Define a porta do serviço (Nginx roda na porta 80 dentro do container)
+        - traefik.http.services.conarmas_os.loadbalancer.server.port=80
+
+        # Define o uso do Host Header
+        - traefik.http.services.conarmas_os.loadbalancer.passHostHeader=true
+
+        # Health check do loadbalancer
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.path=/
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.timeout=3s
+
+      # Configura o modo de atualização do serviço
+      update_config:
+        # Configura o paralelismo de atualização
+        parallelism: 1
+        # Configura o tempo de espera entre as atualizações
+        delay: 10s
+        # Configura a ordem de atualização
+        order: start-first
+        # Configura a ação em caso de falha
+        failure_action: rollback
+
+      # Configura o restart policy
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+# Configuração de redes
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true

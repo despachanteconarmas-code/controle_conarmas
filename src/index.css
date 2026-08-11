@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Conarmas Controle de OS Design System
+Professional service management interface with dark/light theme support.
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Light Theme - Professional Blue & Gray Palette */
+    --background: 0 0% 98%;
+    --foreground: 216 12% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 216 12% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 12% 12%;
+
+    /* Professional navy blue for primary actions */
+    --primary: 214 31% 20%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 210 12% 96%;
+    --secondary-foreground: 216 12% 12%;
+
+    --muted: 210 12% 96%;
+    --muted-foreground: 216 8% 46%;
+
+    --accent: 214 31% 94%;
+    --accent-foreground: 214 31% 20%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    /* Success colors for warranty status */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+
+    /* Warning colors for near-expiry warranty */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 98%;
+
+    /* Professional borders and inputs */
+    --border: 214 12% 88%;
+    --input: 214 12% 88%;
+    --ring: 214 31% 20%;
+
+    --radius: 0.5rem;
+
+    /* Professional gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214, 31%, 20%), hsl(214, 31%, 25%));
+    --gradient-secondary: linear-gradient(135deg, hsl(210, 12%, 96%), hsl(210, 12%, 98%));
+    --gradient-success: linear-gradient(135deg, hsl(142, 76%, 36%), hsl(142, 76%, 40%));
+    
+    /* Professional shadows */
+    --shadow-card: 0 2px 8px -2px hsl(214, 31%, 20% / 0.08);
+    --shadow-dialog: 0 25px 50px -12px hsl(214, 31%, 20% / 0.25);
+    --shadow-button: 0 2px 4px -1px hsl(214, 31%, 20% / 0.1);
+
+    /* Transitions */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark Theme - Professional contrast for service management */
+    --background: 216 24% 6%;
+    --foreground: 0 0% 98%;
+
+    --card: 216 20% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 216 20% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 214 100% 85%;
+    --primary-foreground: 216 24% 6%;
+
+    --secondary: 216 12% 16%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 216 12% 16%;
+    --muted-foreground: 216 8% 65%;
+
+    --accent: 216 12% 16%;
+    --accent-foreground: 214 100% 85%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 216 24% 6%;
+
+    /* Success and warning colors for dark theme */
+    --success: 142 76% 45%;
+    --success-foreground: 216 24% 6%;
+
+    --warning: 38 92% 60%;
+    --warning-foreground: 216 24% 6%;
+
+    --border: 216 12% 20%;
+    --input: 216 12% 20%;
+    --ring: 214 100% 85%;
+
+    /* Dark theme gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214, 100%, 85%), hsl(214, 100%, 90%));
+    --gradient-secondary: linear-gradient(135deg, hsl(216, 12%, 16%), hsl(216, 12%, 20%));
+    --gradient-success: linear-gradient(135deg, hsl(142, 76%, 45%), hsl(142, 76%, 50%));
+    
+    /* Dark theme shadows */
+    --shadow-card: 0 2px 8px -2px hsl(216, 24%, 6% / 0.5);
+    --shadow-dialog: 0 25px 50px -12px hsl(216, 24%, 6% / 0.8);
+    --shadow-button: 0 2px 4px -1px hsl(216, 24%, 6% / 0.3);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

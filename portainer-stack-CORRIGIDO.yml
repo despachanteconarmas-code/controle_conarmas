@@ -1,0 +1,78 @@
+version: "3.7"
+
+services:
+  conarmas_os_manager:
+    # Imagem local buildada na VPS
+    image: conarmas-os-manager:latest
+
+    # Hostname do container
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    # Redes
+    networks:
+      - network_swarm_public
+
+    # Configurações de deploy
+    deploy:
+      mode: replicated
+      replicas: 1
+
+      # IMPORTANTE: Placement constraints
+      placement:
+        constraints:
+          # Se o node for manager, use:
+          - node.role == manager
+
+          # OU se você souber o hostname exato do node onde buildou a imagem:
+          # - node.hostname == SEU-HOSTNAME-EXATO
+
+      # Recursos
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+      # Labels do Traefik
+      labels:
+        # Habilitar Traefik
+        - traefik.enable=true
+
+        # IMPORTANTE: Substitua pelo seu domínio
+        - traefik.http.routers.conarmas_os.rule=Host(`os.conarmas.com.br`)
+
+        # HTTPS
+        - traefik.http.routers.conarmas_os.entrypoints=websecure
+        - traefik.http.routers.conarmas_os.tls.certresolver=letsencryptresolver
+
+        # Serviço
+        - traefik.http.routers.conarmas_os.service=conarmas_os
+        - traefik.http.services.conarmas_os.loadbalancer.server.port=80
+        - traefik.http.services.conarmas_os.loadbalancer.passHostHeader=true
+
+        # Health check
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.path=/
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.timeout=3s
+
+      # Update config
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+      # Restart policy
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+# Redes
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true

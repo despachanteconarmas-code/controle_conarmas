@@ -1,0 +1,55 @@
+version: "3.7"
+
+# Stack Conarmas OS Manager - controle.armascon.com.br
+services:
+  conarmas_os_manager:
+    image: conarmas-os-manager:latest
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    networks:
+      - network_swarm_public
+
+    deploy:
+      mode: replicated
+      replicas: 1
+
+      placement:
+        constraints:
+          - node.hostname == manager01
+
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.conarmas_os.rule=Host(`controle.armascon.com.br`)
+        - traefik.http.routers.conarmas_os.entrypoints=websecure
+        - traefik.http.routers.conarmas_os.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.conarmas_os.service=conarmas_os
+        - traefik.http.services.conarmas_os.loadbalancer.server.port=80
+        - traefik.http.services.conarmas_os.loadbalancer.passHostHeader=true
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.path=/
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.timeout=3s
+
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true

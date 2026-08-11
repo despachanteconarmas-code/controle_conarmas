@@ -1,0 +1,188 @@
+version: "3.7"
+
+#########################################################
+#########################################################
+# STACK DO CONARMAS OS MANAGER
+# Domínio: controle.armascon.com.br
+# Data: 2025-10-08
+#########################################################
+#########################################################
+
+services:
+  conarmas:
+    #########################################################
+    # Imagem oficial do Nginx Alpine (leve e segura)
+    #########################################################
+    image: nginx:alpine
+
+    #########################################################
+    # Define o hostname do container (padrão Swarm)
+    #########################################################
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    #########################################################
+    # Configura a rede do serviço (mesma do Traefik)
+    #########################################################
+    networks:
+      - network_swarm_public
+
+    #########################################################
+    # Volumes para servir a aplicação
+    #########################################################
+    volumes:
+      # Build da aplicação React (arquivos estáticos compilados)
+      # IMPORTANTE: Você precisa ter feito 'npm run build' antes
+      # e enviado a pasta dist/ para /opt/stacks/conarmas/dist/
+      - /opt/stacks/conarmas/dist:/usr/share/nginx/html:ro
+
+      # Configuração customizada do Nginx
+      # IMPORTANTE: Enviar o arquivo nginx.conf para /opt/stacks/conarmas/nginx.conf
+      - /opt/stacks/conarmas/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    #########################################################
+    # Variáveis de ambiente
+    #########################################################
+    environment:
+      # Configura o Timezone
+      - TZ=America/Sao_Paulo
+
+      # Ambiente de produção
+      - NODE_ENV=production
+
+    #########################################################
+    # Configuração do Deploy (Swarm Mode)
+    #########################################################
+    deploy:
+      #########################################################
+      # Modo de replicação
+      #########################################################
+      mode: replicated
+
+      # Uma única réplica (frontend estático não precisa escalar)
+      replicas: 1
+
+      #########################################################
+      # Configura onde o serviço vai rodar
+      #########################################################
+      placement:
+        constraints:
+          # Roda no Manager
+          - node.role == manager
+
+      #########################################################
+      # Limitação de Recursos
+      #########################################################
+      resources:
+        # Limites máximos (previne travamento do host)
+        limits:
+          # 0.25 CPU = 25% de 1 core (Nginx é extremamente leve)
+          cpus: "0.25"
+
+          # 128MB de RAM (suficiente para arquivos estáticos)
+          memory: 128M
+
+        # Reservas mínimas (garante recursos disponíveis)
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+      #########################################################
+      # Labels do Traefik (Roteamento HTTPS)
+      #########################################################
+      labels:
+        #########################################################
+        # Habilita o Traefik para este serviço
+        #########################################################
+        - traefik.enable=true
+
+        #########################################################
+        # Configuração do Router (HTTP → HTTPS)
+        #########################################################
+        # Define o domínio do Conarmas
+        - traefik.http.routers.conarmas.rule=Host(`controle.armascon.com.br`)
+
+        # Usa o entrypoint HTTPS (websecure = porta 443)
+        - traefik.http.routers.conarmas.entrypoints=websecure
+
+        # Configura o certificado SSL automático (Let's Encrypt)
+        - traefik.http.routers.conarmas.tls.certresolver=letsencryptresolver
+
+        # Associa ao serviço conarmas
+        - traefik.http.routers.conarmas.service=conarmas
+
+        #########################################################
+        # Configuração do Service (Load Balancer)
+        #########################################################
+        # Define a porta interna do container onde o Nginx escuta
+        - traefik.http.services.conarmas.loadbalancer.server.port=80
+
+        # Passa o Host Header original para o container
+        - traefik.http.services.conarmas.loadbalancer.passHostHeader=true
+
+        #########################################################
+        # Middleware de Segurança (Headers HTTP)
+        #########################################################
+        # Força SSL/TLS
+        - traefik.http.middlewares.conarmas-security.headers.sslRedirect=true
+
+        # Previne clickjacking (não permite iframe de outros domínios)
+        - traefik.http.middlewares.conarmas-security.headers.frameDeny=true
+
+        # Ativa proteção XSS do navegador
+        - traefik.http.middlewares.conarmas-security.headers.browserXssFilter=true
+
+        # Previne MIME-type sniffing
+        - traefik.http.middlewares.conarmas-security.headers.contentTypeNosniff=true
+
+        # Força HTTPS por 1 ano (HSTS)
+        - traefik.http.middlewares.conarmas-security.headers.stsSeconds=31536000
+
+        # Inclui subdomínios no HSTS
+        - traefik.http.middlewares.conarmas-security.headers.stsIncludeSubdomains=true
+
+        # Adiciona ao HSTS preload list dos navegadores
+        - traefik.http.middlewares.conarmas-security.headers.stsPreload=true
+
+        # Aplica o middleware de segurança ao router
+        - traefik.http.routers.conarmas.middlewares=conarmas-security
+
+      #########################################################
+      # Configuração de Atualização (Zero Downtime)
+      #########################################################
+      update_config:
+        # Atualiza uma réplica por vez
+        parallelism: 1
+
+        # Aguarda 10 segundos antes de atualizar
+        delay: 10s
+
+        # Inicia o novo antes de parar o antigo (zero downtime)
+        order: start-first
+
+        # Em caso de falha, faz rollback automático
+        failure_action: rollback
+
+      #########################################################
+      # Política de Restart (Auto-recuperação)
+      #########################################################
+      restart_policy:
+        # Reinicia apenas em caso de falha
+        condition: on-failure
+
+        # Aguarda 5 segundos antes de reiniciar
+        delay: 5s
+
+        # Tenta reiniciar no máximo 3 vezes
+        max_attempts: 3
+
+        # Janela de 2 minutos para considerar sucesso
+        window: 120s
+
+#########################################################
+# Configuração de Redes
+#########################################################
+networks:
+  # Usa a rede pública do Swarm
+  # Mesma rede do Traefik e outros serviços
+  network_swarm_public:
+    external: true

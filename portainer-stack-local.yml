@@ -1,0 +1,67 @@
+version: "3.7"
+
+# Stack do Portainer para imagem buildada localmente na VPS
+services:
+  conarmas_os_manager:
+    # Imagem local buildada na VPS
+    image: conarmas-os-manager:latest
+
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    networks:
+      - network_swarm_public
+
+    deploy:
+      mode: replicated
+      replicas: 1
+
+      placement:
+        constraints:
+          # Rodar no node manager01 onde a imagem foi buildada
+          - node.hostname == manager01
+
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+      labels:
+        # Habilita o Traefik
+        - traefik.enable=true
+
+        # IMPORTANTE: Substitua 'os.conarmas.com.br' pelo seu domínio
+        - traefik.http.routers.conarmas_os.rule=Host(`controle.armascon.com.br`)
+
+        # HTTPS com Let's Encrypt
+        - traefik.http.routers.conarmas_os.entrypoints=websecure
+        - traefik.http.routers.conarmas_os.tls.certresolver=letsencryptresolver
+
+        # Configuração do serviço
+        - traefik.http.routers.conarmas_os.service=conarmas_os
+        - traefik.http.services.conarmas_os.loadbalancer.server.port=80
+        - traefik.http.services.conarmas_os.loadbalancer.passHostHeader=true
+
+        # Health check
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.path=/
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.conarmas_os.loadbalancer.healthcheck.timeout=3s
+
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true

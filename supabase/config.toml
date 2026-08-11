@@ -1,0 +1,19 @@
+project_id = "utwujmzfwpyixczstdjw"
+
+[functions.upload-os-file]
+verify_jwt = true
+
+[functions.get-os-files]
+verify_jwt = true
+
+[functions.delete-os-file]
+verify_jwt = true
+
+[functions.create-upload-session]
+verify_jwt = true
+
+[functions.upload-to-staging]
+verify_jwt = true
+
+[functions.finalize-upload-session]
+verify_jwt = true
