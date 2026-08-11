@@ -42,16 +42,22 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copiar script de inicialização
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# Nome próprio para não sobrescrever o /docker-entrypoint.sh da imagem
+# oficial do Nginx
+COPY docker-entrypoint.sh /app-entrypoint.sh
+RUN chmod +x /app-entrypoint.sh
 
 # Expor porta 80
 EXPOSE 80
 
 # Health check
+# Usa 127.0.0.1, e não localhost: dentro do container o localhost
+# resolve apenas para ::1 (IPv6) e o nginx.conf faz `listen 80`
+# somente em IPv4, então o healthcheck em localhost sempre falharia
+# com "Connection refused" e o Swarm derrubaria a task.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
 
 # Usar o script de entrada personalizado
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/app-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
