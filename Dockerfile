@@ -8,11 +8,13 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copiar arquivos de dependências
-COPY package*.json ./
+# Vem antes do código-fonte para aproveitar o cache do Docker:
+# só reinstala quando package.json/package-lock.json mudarem
+COPY package.json package-lock.json ./
 
-# Instalar dependências
-RUN npm ci --only=production --ignore-scripts && \
-    npm cache clean --force
+# Instalar dependências (inclui devDependencies: vite e typescript
+# são necessários para o build)
+RUN npm ci
 
 # Copiar código fonte
 COPY . .
@@ -22,24 +24,25 @@ ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 
 # Definir variáveis de ambiente para o build
+# ATENÇÃO: o Vite lê as VITE_* em tempo de build e embute os valores
+# no bundle. Definir isso no runtime do container não tem efeito.
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 ENV NODE_ENV=production
 
-# Instalar dependências de desenvolvimento e fazer build
-RUN npm install && npm run build
+RUN npm run build
 
 # Estágio 2: Runtime com Nginx
 FROM nginx:alpine
 
 # Copiar configuração customizada do Nginx
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copiar arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copiar script de inicialização
-COPY --from=builder /app/docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 # Expor porta 80

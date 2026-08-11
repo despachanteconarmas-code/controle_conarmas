@@ -1,8 +1,8 @@
 # Dependências
+# NÃO ignorar package-lock.json: o `npm ci` do Dockerfile depende dele
 node_modules
 npm-debug.log
 yarn-error.log
-package-lock.json
 
 # Build
 dist

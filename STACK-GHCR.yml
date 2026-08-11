@@ -1,0 +1,197 @@
+version: "3.7"
+
+#########################################################
+# STACK DO CONARMAS OS MANAGER - IMAGEM VIA GHCR
+# Domínio: controle.armascon.com.br
+#
+# Substitui a STACK-FINAL.yml (que usava bind mount de
+# /opt/stacks/conarmas/dist enviado por SFTP).
+#
+# Agora o build vem pronto de dentro da imagem, publicada
+# automaticamente pelo GitHub Actions a cada push na main.
+#
+# Deploy de uma versão nova (manual, na VPS):
+#   docker service update \
+#     --image ghcr.io/despachanteconarmas-code/controle_conarmas:latest \
+#     --force controle_conarmas_conarmas
+#########################################################
+
+services:
+  conarmas:
+    #########################################################
+    # Imagem publicada pelo GitHub Actions
+    # Para fixar uma versão específica, troque :latest por
+    # :sha-xxxxxxx (ver Packages no GitHub)
+    #########################################################
+    image: ghcr.io/despachanteconarmas-code/controle_conarmas:latest
+
+    #########################################################
+    # Define o hostname do container (padrão Swarm)
+    #########################################################
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+
+    #########################################################
+    # Configura a rede do serviço (mesma do Traefik)
+    #########################################################
+    networks:
+      - network_swarm_public
+
+    #########################################################
+    # Sem volumes: o build da aplicação e o nginx.conf já
+    # estão dentro da imagem. Não é mais preciso enviar a
+    # pasta dist/ via SFTP.
+    #########################################################
+
+    #########################################################
+    # Variáveis de ambiente
+    # ATENÇÃO: as VITE_* NÃO entram aqui. O Vite embute essas
+    # variáveis no bundle em tempo de build, então elas são
+    # definidas no GitHub (Settings > Secrets and variables).
+    #########################################################
+    environment:
+      # Configura o Timezone
+      - TZ=America/Sao_Paulo
+
+      # Ambiente de produção
+      - NODE_ENV=production
+
+    #########################################################
+    # Configuração do Deploy (Swarm Mode)
+    #########################################################
+    deploy:
+      #########################################################
+      # Modo de replicação
+      #########################################################
+      mode: replicated
+
+      # Uma única réplica (frontend estático não precisa escalar)
+      replicas: 1
+
+      #########################################################
+      # Configura onde o serviço vai rodar
+      #########################################################
+      placement:
+        constraints:
+          # Roda no Manager
+          - node.role == manager
+
+      #########################################################
+      # Limitação de Recursos
+      #########################################################
+      resources:
+        # Limites máximos
+        limits:
+          cpus: "1"
+          memory: 1024M
+
+        # Reservas mínimas
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+      #########################################################
+      # Labels do Traefik (Roteamento HTTPS)
+      #########################################################
+      labels:
+        #########################################################
+        # Habilita o Traefik para este serviço
+        #########################################################
+        - traefik.enable=true
+
+        #########################################################
+        # Configuração do Router (HTTP → HTTPS)
+        #########################################################
+        # Define o domínio do Conarmas
+        - traefik.http.routers.conarmas.rule=Host(`controle.armascon.com.br`)
+
+        # Usa o entrypoint HTTPS (websecure = porta 443)
+        - traefik.http.routers.conarmas.entrypoints=websecure
+
+        # Configura o certificado SSL automático (Let's Encrypt)
+        - traefik.http.routers.conarmas.tls.certresolver=letsencryptresolver
+
+        # Associa ao serviço conarmas
+        - traefik.http.routers.conarmas.service=conarmas
+
+        #########################################################
+        # Configuração do Service (Load Balancer)
+        #########################################################
+        # Define a porta interna do container onde o Nginx escuta
+        - traefik.http.services.conarmas.loadbalancer.server.port=80
+
+        # Passa o Host Header original para o container
+        - traefik.http.services.conarmas.loadbalancer.passHostHeader=true
+
+        # Health check para verificar se a aplicação está respondendo
+        - traefik.http.services.conarmas.loadbalancer.healthcheck.path=/
+        - traefik.http.services.conarmas.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.conarmas.loadbalancer.healthcheck.timeout=3s
+
+        #########################################################
+        # Middleware de Segurança (Headers HTTP)
+        #########################################################
+        # Força SSL/TLS
+        - traefik.http.middlewares.conarmas-security.headers.sslRedirect=true
+
+        # Previne clickjacking (não permite iframe de outros domínios)
+        - traefik.http.middlewares.conarmas-security.headers.frameDeny=true
+
+        # Ativa proteção XSS do navegador
+        - traefik.http.middlewares.conarmas-security.headers.browserXssFilter=true
+
+        # Previne MIME-type sniffing
+        - traefik.http.middlewares.conarmas-security.headers.contentTypeNosniff=true
+
+        # Força HTTPS por 1 ano (HSTS)
+        - traefik.http.middlewares.conarmas-security.headers.stsSeconds=31536000
+
+        # Inclui subdomínios no HSTS
+        - traefik.http.middlewares.conarmas-security.headers.stsIncludeSubdomains=true
+
+        # Adiciona ao HSTS preload list dos navegadores
+        - traefik.http.middlewares.conarmas-security.headers.stsPreload=true
+
+        # Aplica o middleware de segurança ao router
+        - traefik.http.routers.conarmas.middlewares=conarmas-security
+
+      #########################################################
+      # Configuração de Atualização (Zero Downtime)
+      #########################################################
+      update_config:
+        # Atualiza uma réplica por vez
+        parallelism: 1
+
+        # Aguarda 10 segundos antes de atualizar
+        delay: 10s
+
+        # Inicia o novo antes de parar o antigo (zero downtime)
+        order: start-first
+
+        # Em caso de falha, faz rollback automático
+        failure_action: rollback
+
+      #########################################################
+      # Política de Restart (Auto-recuperação)
+      #########################################################
+      restart_policy:
+        # Reinicia apenas em caso de falha
+        condition: on-failure
+
+        # Aguarda 5 segundos antes de reiniciar
+        delay: 5s
+
+        # Tenta reiniciar no máximo 3 vezes
+        max_attempts: 3
+
+        # Janela de 2 minutos para considerar sucesso
+        window: 120s
+
+#########################################################
+# Configuração de Redes
+#########################################################
+networks:
+  # Usa a rede pública do Swarm
+  # Mesma rede do Traefik e outros serviços
+  network_swarm_public:
+    name: network_swarm_public
+    external: true
