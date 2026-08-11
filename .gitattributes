@@ -1,0 +1,22 @@
+# Normaliza quebras de linha: LF no repositorio para todo arquivo de texto.
+# Evita que checkouts no Windows (core.autocrlf=true) gravem CRLF em scripts
+# que rodam em container Linux (ex.: docker-entrypoint.sh quebra com CRLF).
+* text=auto eol=lf
+
+# Scripts e configs que precisam obrigatoriamente de LF
+*.sh    text eol=lf
+Dockerfile* text eol=lf
+*.conf  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sql   text eol=lf
+
+# Binarios: nunca normalizar
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.lockb binary
