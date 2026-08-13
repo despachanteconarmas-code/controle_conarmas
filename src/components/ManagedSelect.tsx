@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useOptions } from "@/hooks/useOptions";
+import { useOptions, toOptionValue } from "@/hooks/useOptions";
 import { OptionCategory, OptionList } from "@/types/database";
 import { Plus, X, Check } from "lucide-react";
 
@@ -29,6 +29,12 @@ interface ManagedSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /**
+   * Grava o rótulo em vez do código. Usado na descrição dos itens da OS,
+   * que é texto exibido na tela e no PDF: gravar "MAO_DE_OBRA" faria a
+   * OS mostrar o código cru se o item saísse do catálogo depois.
+   */
+  useLabelAsValue?: boolean;
 }
 
 /**
@@ -42,9 +48,13 @@ export function ManagedSelect({
   onChange,
   placeholder = "Selecione",
   disabled,
+  useLabelAsValue = false,
 }: ManagedSelectProps) {
   const { options, isLoading, addOption, removeOption } = useOptions(category);
   const { toast } = useToast();
+
+  const valueOf = (option: OptionList) =>
+    useLabelAsValue ? option.label : option.value;
 
   const [adding, setAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
@@ -56,6 +66,8 @@ export function ManagedSelect({
 
     try {
       await addOption.mutateAsync(label);
+      // Já deixa selecionado: quem digitou o nome quer usá-lo agora
+      onChange(useLabelAsValue ? label : toOptionValue(label));
       setNewLabel("");
       setAdding(false);
       toast({
@@ -75,7 +87,7 @@ export function ManagedSelect({
     try {
       await removeOption.mutateAsync(option);
       // Se a opção removida estava escolhida, limpa o campo
-      if (value === option.value) onChange("");
+      if (value === valueOf(option)) onChange("");
       toast({
         title: "Opção removida",
         description: `"${option.label}" saiu da lista. As OS que já usam continuam intactas.`,
@@ -100,7 +112,7 @@ export function ManagedSelect({
         <SelectContent>
           {options.map((option) => (
             <div key={option.id} className="relative flex items-center">
-              <SelectItem value={option.value} className="flex-1 pr-9">
+              <SelectItem value={valueOf(option)} className="flex-1 pr-9">
                 {option.label}
               </SelectItem>
               {/* Fora do SelectItem para o clique não selecionar a opção */}

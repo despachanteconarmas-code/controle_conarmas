@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/CurrencyInput";
+import { ManagedSelect } from "@/components/ManagedSelect";
 import { formatCurrency } from "@/lib/formatters";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -67,10 +68,15 @@ export function ServiceOrderItems({ items, onChange, disabled }: ServiceOrderIte
                 <span className="mb-1 block text-xs text-muted-foreground md:hidden">
                   Descrição
                 </span>
-                <Input
+                {/* Catálogo de serviços: evita redigitar o mesmo item em
+                    toda OS. `useLabelAsValue` porque a descrição é o texto
+                    que aparece na OS e no PDF. */}
+                <ManagedSelect
+                  category="service_item"
                   value={item.description}
-                  onChange={(e) => updateItem(index, { description: e.target.value })}
-                  placeholder="Ex.: Mola principal, mão de obra, limpeza"
+                  onChange={(description) => updateItem(index, { description })}
+                  placeholder="Selecione ou cadastre o serviço"
+                  useLabelAsValue
                   disabled={disabled}
                 />
               </div>

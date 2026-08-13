@@ -34,7 +34,7 @@ export interface ServiceOrder {
 
 // Listas administráveis pelo usuário (Produto, Tipo, Autoridade).
 // Status não entra aqui: dispara triggers de garantia e tem cores fixas.
-export type OptionCategory = 'product' | 'type' | 'authority';
+export type OptionCategory = 'product' | 'type' | 'authority' | 'service_item';
 
 export interface OptionList {
   id: string;
