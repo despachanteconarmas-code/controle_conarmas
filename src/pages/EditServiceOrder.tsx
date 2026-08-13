@@ -576,7 +576,11 @@ export default function EditServiceOrder() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          {/* `value` e nao `defaultValue`: a OS chega do banco
+                              depois da primeira renderizacao, e o defaultValue
+                              so e lido uma vez -- o campo ficava preso em
+                              "Recebida" independente do status real */}
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Selecione o status" />
