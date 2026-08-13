@@ -8,13 +8,15 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -57,16 +59,7 @@ import {
 } from "@/lib/formatters";
 import { Customer, ServiceOrder } from "@/types/database";
 import InputMask from "react-input-mask";
-import {
-  Search,
-  Plus,
-  Pencil,
-  Trash2,
-  Phone,
-  MapPin,
-  FileText,
-  Users,
-} from "lucide-react";
+import { Search, Plus, Pencil, Trash2, FileText, Users } from "lucide-react";
 
 export default function Customers() {
   const { user, loading: authLoading } = useAuth();
@@ -101,7 +94,8 @@ export default function Customers() {
           : query.ilike("full_name", `%${term}%`);
       }
 
-      const { data, error } = await query.limit(100);
+      // Em lista cabe muito mais gente na tela do que cabia em cartões
+      const { data, error } = await query.limit(1000);
       if (error) throw error;
       return (data ?? []) as unknown as Customer[];
     },
@@ -303,60 +297,72 @@ export default function Customers() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {customers.map((customer) => (
-              <Card key={customer.id} className="flex flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{customer.full_name}</CardTitle>
-                  <CardDescription>{formatCPF(customer.cpf)}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col justify-between gap-4">
-                  <div className="space-y-2 text-sm">
-                    {customer.phone && (
-                      <p className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="h-4 w-4 shrink-0" />
-                        {formatPhone(customer.phone)}
-                      </p>
-                    )}
-                    {customer.address_city && (
-                      <p className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="h-4 w-4 shrink-0" />
-                        {[customer.address_neighborhood, customer.address_city]
-                          .filter(Boolean)
-                          .join(" - ")}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHistoryOf(customer)}
-                    >
-                      <FileText className="mr-2 h-4 w-4" />
-                      Histórico
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(customer)}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeleteTarget(customer)}
-                      aria-label={`Excluir ${customer.full_name}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="hidden sm:table-cell">CPF</TableHead>
+                  <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                  <TableHead className="hidden lg:table-cell">Cidade</TableHead>
+                  <TableHead className="w-[130px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="font-medium">
+                      {customer.full_name}
+                      {/* Nas telas estreitas as colunas somem, então o CPF
+                          acompanha o nome para a linha não ficar ambígua */}
+                      <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                        {formatCPF(customer.cpf)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell tabular-nums">
+                      {formatCPF(customer.cpf)}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell tabular-nums">
+                      {customer.phone ? formatPhone(customer.phone) : "—"}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {customer.address_city || "—"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setHistoryOf(customer)}
+                          title="Histórico de OS"
+                          aria-label={`Histórico de ${customer.full_name}`}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit(customer)}
+                          title="Editar"
+                          aria-label={`Editar ${customer.full_name}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteTarget(customer)}
+                          title="Excluir"
+                          aria-label={`Excluir ${customer.full_name}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </main>

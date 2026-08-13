@@ -41,8 +41,10 @@ const phoneSchema = z.string()
   }, "Telefone inválido (use DDD + número)");
 
 // Schema do cadastro de clientes
+// `.trim()` em nomes e endereços: espaço no início bagunçava a ordem
+// alfabética da lista de clientes
 export const customerSchema = z.object({
-  full_name: z.string().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
+  full_name: z.string().trim().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
   cpf: z.string()
     .min(1, "CPF é obrigatório")
     .refine((cpf) => validateCPF(cpf), "CPF inválido"),
@@ -68,8 +70,8 @@ export type ServiceOrderItemFormData = z.infer<typeof serviceOrderItemSchema>;
 
 // Schema para criação de OS (alinhado com tipos do Supabase)
 export const createServiceOrderSchema = z.object({
-  customer_full_name: z.string().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
-  address_street: z.string().min(1, "Rua é obrigatória"),
+  customer_full_name: z.string().trim().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
+  address_street: z.string().trim().min(1, "Rua é obrigatória"),
   address_number: z.string()
     .min(1, "Número é obrigatório")
     .refine((num) => /^\d+[A-Za-z]?$|^s\/n$/.test(num), "Formato inválido (ex: '120', '120A', 's/n')"),
@@ -104,8 +106,8 @@ export const createServiceOrderSchema = z.object({
 
 // Schema para atualização de OS
 export const updateServiceOrderSchema = z.object({
-  customer_full_name: z.string().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo").optional(),
-  address_street: z.string().min(1, "Rua é obrigatória").optional(),
+  customer_full_name: z.string().trim().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo").optional(),
+  address_street: z.string().trim().min(1, "Rua é obrigatória").optional(),
   address_number: z.string()
     .min(1, "Número é obrigatório")
     .refine((num) => /^\d+[A-Za-z]?$|^s\/n$/.test(num), "Formato inválido (ex: '120', '120A', 's/n')")
