@@ -14,7 +14,8 @@ import {
   Moon, 
   Sun, 
   Monitor,
-  Plus
+  Plus,
+  Users
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -63,6 +64,25 @@ export function Header() {
           {/* Ações rápidas */}
           <div className="flex items-center gap-2">
             <Button
+              variant="outline"
+              onClick={() => navigate('/clientes')}
+              className="hidden sm:flex"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Clientes
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => navigate('/clientes')}
+              className="sm:hidden"
+              size="icon"
+              aria-label="Clientes"
+            >
+              <Users className="h-4 w-4" />
+            </Button>
+
+            <Button
               onClick={() => navigate('/nova-os')}
               className="hidden sm:flex"
             >
@@ -75,6 +95,7 @@ export function Header() {
               onClick={() => navigate('/nova-os')}
               className="sm:hidden"
               size="icon"
+              aria-label="Nova OS"
             >
               <Plus className="h-4 w-4" />
             </Button>

@@ -130,6 +130,92 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_street: string | null
+          cpf: string
+          created_at: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_street?: string | null
+          cpf: string
+          created_at?: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_street?: string | null
+          cpf?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_order_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          position: number
+          quantity: number
+          service_order_id: string
+          unit_value_cents: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          position?: number
+          quantity?: number
+          service_order_id: string
+          unit_value_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          position?: number
+          quantity?: number
+          service_order_id?: string
+          unit_value_cents?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_order_items_service_order_id_fkey"
+            columns: ["service_order_id"]
+            isOneToOne: false
+            referencedRelation: "service_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_orders: {
         Row: {
           address_city: string | null
@@ -143,6 +229,8 @@ export type Database = {
           customer_address_full: string | null
           customer_cpf: string
           customer_full_name: string
+          customer_id: string | null
+          customer_phone: string | null
           delivery_date: string | null
           entry_date: string
           id: string
@@ -170,6 +258,8 @@ export type Database = {
           customer_address_full?: string | null
           customer_cpf: string
           customer_full_name: string
+          customer_id?: string | null
+          customer_phone?: string | null
           delivery_date?: string | null
           entry_date?: string
           id?: string
@@ -197,6 +287,8 @@ export type Database = {
           customer_address_full?: string | null
           customer_cpf?: string
           customer_full_name?: string
+          customer_id?: string | null
+          customer_phone?: string | null
           delivery_date?: string | null
           entry_date?: string
           id?: string

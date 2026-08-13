@@ -5,7 +5,7 @@ export interface ServiceOrder {
   customer_full_name: string;
   customer_address: string;
   customer_cpf: string;
-  product: 'PISTOLA' | 'CARABINA' | 'REVOLVER';
+  product: 'PISTOLA' | 'CARABINA' | 'REVOLVER' | 'ESPINGARDA';
   serial_number: string;
   type: 'FOGO' | 'PRESSAO' | 'AIRSOFT';
   authority?: 'EXERCITO' | 'POLICIA_FEDERAL' | null;
@@ -24,6 +24,38 @@ export interface ServiceOrder {
   address_city?: string | null;
   address_complement?: string | null;
   customer_address_full?: string | null;
+// Vínculo com o cadastro de clientes
+  customer_id?: string | null;
+  customer_phone?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Cliente cadastrado, reaproveitado entre OS
+export interface Customer {
+  id: string;
+  full_name: string;
+  cpf: string;
+  phone?: string | null;
+  address_street?: string | null;
+  address_number?: string | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_complement?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Item lançado na OS. O total da OS (repair_value_cents) é a soma
+// de quantity * unit_value_cents, mantida por trigger no banco.
+export interface ServiceOrderItem {
+  id: string;
+  service_order_id: string;
+  description: string;
+  quantity: number;
+  unit_value_cents: number;
+  position: number;
   created_at: string;
   updated_at: string;
 }

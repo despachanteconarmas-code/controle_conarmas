@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { ServiceOrder, statusConfig, ServiceOrderFile } from "@/types/database";
-import { 
-  formatCurrency, 
-  formatDate, 
-  formatCPF, 
-  statusLabels, 
+import { ServiceOrder, statusConfig, ServiceOrderFile, ServiceOrderItem } from "@/types/database";
+import {
+  formatCurrency,
+  formatDate,
+  formatCPF,
+  formatPhone,
+  statusLabels,
   productLabels, 
   typeLabels, 
   authorityLabels,
@@ -82,6 +83,22 @@ export default function ServiceOrderDetails() {
     enabled: !!id && !!user,
   });
 
+  // Itens que compõem o valor do reparo
+  const { data: items = [] } = useQuery({
+    queryKey: ['service-order-items', id],
+    enabled: !!id && !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_order_items')
+        .select('*')
+        .eq('service_order_id', id!)
+        .order('position');
+
+      if (error) throw error;
+      return (data ?? []) as unknown as ServiceOrderItem[];
+    },
+  });
+
   // Buscar arquivos da OS
   useEffect(() => {
     const loadFiles = async () => {
@@ -120,7 +137,7 @@ export default function ServiceOrderDetails() {
     if (!serviceOrder) return;
     
     try {
-      await generateServiceOrderPDF(serviceOrder);
+      await generateServiceOrderPDF(serviceOrder, items);
       toast({
         title: "PDF gerado com sucesso!",
         description: `O PDF da ${serviceOrder.os_number} foi baixado.`,
@@ -373,6 +390,47 @@ export default function ServiceOrderDetails() {
 
         {/* Informações principais */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Itens do reparo */}
+          {items.length > 0 && (
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Itens do Reparo
+                </CardTitle>
+                <CardDescription>
+                  Peças e serviços que compõem o valor total
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-baseline justify-between gap-4 border-b pb-2 last:border-0"
+                    >
+                      <span className="text-base">
+                        {item.description}
+                        {item.quantity > 1 && (
+                          <span className="text-muted-foreground"> × {item.quantity}</span>
+                        )}
+                      </span>
+                      <span className="whitespace-nowrap font-medium tabular-nums">
+                        {formatCurrency(item.quantity * item.unit_value_cents)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-baseline justify-between gap-4 pt-2">
+                    <span className="font-semibold">Total</span>
+                    <span className="text-xl font-bold tabular-nums">
+                      {formatCurrency(serviceOrder.repair_value_cents)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Dados do Cliente */}
           <Card>
             <CardHeader>
@@ -391,7 +449,14 @@ export default function ServiceOrderDetails() {
                 <label className="text-sm font-medium text-muted-foreground">CPF</label>
                 <p className="text-base">{formatCPF(serviceOrder.customer_cpf)}</p>
               </div>
-              
+
+              {serviceOrder.customer_phone && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Telefone</label>
+                  <p className="text-base">{formatPhone(serviceOrder.customer_phone)}</p>
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Endereço</label>
                 <p className="text-base">{serviceOrder.customer_address}</p>

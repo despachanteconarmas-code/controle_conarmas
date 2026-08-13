@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ServiceOrder } from '@/types/database';
-import { formatCurrency, formatDate, formatCPF, productLabels, typeLabels, authorityLabels, statusLabels } from './formatters';
+import { ServiceOrder, ServiceOrderItem } from '@/types/database';
+import { formatCurrency, formatDate, formatCPF, formatPhone, productLabels, typeLabels, authorityLabels, statusLabels } from './formatters';
 
 // URL da logo da empresa
 const LOGO_URL = 'https://utwujmzfwpyixczstdjw.supabase.co/storage/v1/object/sign/logo/CAPA%20REDES%20SOCIAIS.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NmRkNTQxYi00NDkyLTRjYTUtOTg2ZC01ZDc3NjI5ODU5MTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dvL0NBUEEgUkVERVMgU09DSUFJUy5wbmciLCJpYXQiOjE3NTkzNDkwNDcsImV4cCI6MTkxNzAyOTA0N30.HuUX3EU4YERLcy-vzGdmkckhMY6gXJU17v0UC3ffz0Y';
@@ -17,7 +17,10 @@ const loadImage = (url: string): Promise<HTMLImageElement> => {
   });
 };
 
-export const generateServiceOrderPDF = async (order: ServiceOrder) => {
+export const generateServiceOrderPDF = async (
+  order: ServiceOrder,
+  items: ServiceOrderItem[] = []
+) => {
   const doc = new jsPDF();
   
   // Configurações
@@ -107,6 +110,10 @@ export const generateServiceOrderPDF = async (order: ServiceOrder) => {
     ['CPF:', formatCPF(order.customer_cpf)],
   ];
 
+  if (order.customer_phone) {
+    clientData.push(['Telefone:', formatPhone(order.customer_phone)]);
+  }
+
   // Endereço completo
   const addressParts = [];
   if (order.address_street) addressParts.push(order.address_street);
@@ -174,13 +181,50 @@ export const generateServiceOrderPDF = async (order: ServiceOrder) => {
   doc.setTextColor(...darkColor);
   doc.setFontSize(10);
 
+  // Detalhamento dos itens, quando a OS tiver itens lançados
+  if (items.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Descrição', margin, yPosition);
+    doc.text('Qtd.', pageWidth - margin - 55, yPosition, { align: 'right' });
+    doc.text('Unitário', pageWidth - margin - 30, yPosition, { align: 'right' });
+    doc.text('Subtotal', pageWidth - margin, yPosition, { align: 'right' });
+
+    yPosition += 2;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+
+    items.forEach((item) => {
+      const description = doc.splitTextToSize(item.description, pageWidth - 2 * margin - 60);
+      doc.text(description[0], margin, yPosition);
+      doc.text(String(item.quantity), pageWidth - margin - 55, yPosition, { align: 'right' });
+      doc.text(formatCurrency(item.unit_value_cents), pageWidth - margin - 30, yPosition, { align: 'right' });
+      doc.text(
+        formatCurrency(item.quantity * item.unit_value_cents),
+        pageWidth - margin,
+        yPosition,
+        { align: 'right' }
+      );
+      yPosition += 6;
+    });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 6;
+  }
+
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.text('Valor do Reparo:', margin, yPosition);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(14);
   doc.setTextColor(...primaryColor);
   doc.text(formatCurrency(order.repair_value_cents), margin + 50, yPosition);
-  
+
   yPosition += 10;
   doc.setTextColor(...darkColor);
   doc.setFontSize(10);

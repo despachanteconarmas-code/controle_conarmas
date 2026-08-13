@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import NewServiceOrder from "./pages/NewServiceOrder";
 import ServiceOrderDetails from "./pages/ServiceOrderDetails";
 import EditServiceOrder from "./pages/EditServiceOrder";
+import Customers from "./pages/Customers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
               <Route path="/nova-os" element={<NewServiceOrder />} />
               <Route path="/os/:id" element={<ServiceOrderDetails />} />
               <Route path="/os/:id/editar" element={<EditServiceOrder />} />
+              <Route path="/clientes" element={<Customers />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

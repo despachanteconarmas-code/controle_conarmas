@@ -15,11 +15,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { updateServiceOrderSchema, UpdateServiceOrderData } from "@/lib/validations";
-import { ServiceOrder } from "@/types/database";
-import { formatCurrency, formatCPF, cleanCPF, statusLabels } from "@/lib/formatters";
+import { ServiceOrder, ServiceOrderItem } from "@/types/database";
+import { formatCurrency, formatCPF, cleanCPF, cleanPhone, formatPhone, statusLabels } from "@/lib/formatters";
 import { ArrowLeft, Save } from "lucide-react";
 import InputMask from "react-input-mask";
 import { FileUpload } from "@/components/FileUpload";
+import { ServiceOrderItems, ItemDraft, calculateItemsTotal } from "@/components/ServiceOrderItems";
 
 export default function EditServiceOrder() {
   const { id } = useParams<{ id: string }>();
@@ -95,6 +96,7 @@ export default function EditServiceOrder() {
       address_city: "",
       address_complement: "",
       customer_cpf: "",
+      customer_phone: "",
       product: undefined,
       serial_number: "",
       type: undefined,
@@ -104,6 +106,49 @@ export default function EditServiceOrder() {
       notes: "",
     },
   });
+
+  // Itens do reparo já lançados nesta OS
+  const [items, setItems] = useState<ItemDraft[]>([]);
+
+  const { data: existingItems } = useQuery({
+    queryKey: ['service-order-items', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('service_order_items')
+        .select('*')
+        .eq('service_order_id', id!)
+        .order('position');
+
+      if (error) throw error;
+      return (data ?? []) as unknown as ServiceOrderItem[];
+    },
+  });
+
+  // Carrega os itens no editor. OS antigas não têm itens, mas têm um
+  // valor digitado à mão: vira um item único para não perder o valor.
+  useEffect(() => {
+    if (!existingItems || !serviceOrder) return;
+
+    if (existingItems.length > 0) {
+      setItems(
+        existingItems.map((item) => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_value_cents: item.unit_value_cents,
+        }))
+      );
+    } else if (serviceOrder.repair_value_cents > 0) {
+      setItems([
+        {
+          description: "Reparo",
+          quantity: 1,
+          unit_value_cents: serviceOrder.repair_value_cents,
+        },
+      ]);
+    }
+  }, [existingItems, serviceOrder]);
 
   // Atualizar form quando OS carregar
   useEffect(() => {
@@ -116,6 +161,7 @@ export default function EditServiceOrder() {
         address_city: serviceOrder.address_city || "",
         address_complement: serviceOrder.address_complement || "",
         customer_cpf: formatCPF(serviceOrder.customer_cpf),
+        customer_phone: serviceOrder.customer_phone ? formatPhone(serviceOrder.customer_phone) : "",
         product: serviceOrder.product,
         serial_number: serviceOrder.serial_number,
         type: serviceOrder.type,
@@ -124,7 +170,6 @@ export default function EditServiceOrder() {
         status: serviceOrder.status,
         notes: serviceOrder.notes || "",
       });
-      setRepairValue((serviceOrder.repair_value_cents / 100).toFixed(2).replace('.', ','));
     }
   }, [serviceOrder, form]);
 
@@ -141,11 +186,12 @@ export default function EditServiceOrder() {
         address_city: data.address_city,
         address_complement: data.address_complement || null,
         customer_cpf: data.customer_cpf ? cleanCPF(data.customer_cpf) : undefined,
+        customer_phone: data.customer_phone ? cleanPhone(data.customer_phone) : null,
         product: data.product,
         serial_number: data.serial_number,
         type: data.type,
         authority: data.authority || null,
-        repair_value_cents: data.repair_value_cents,
+        repair_value_cents: calculateItemsTotal(items),
         status: data.status,
         notes: data.notes || null,
         updated_at: new Date().toISOString(),
@@ -159,6 +205,51 @@ export default function EditServiceOrder() {
         .single();
 
       if (error) throw error;
+
+      // Regrava os itens: apagar e reinserir mantém a ordem correta sem
+      // precisar diferenciar item novo, editado e removido. O trigger do
+      // banco recalcula o total da OS ao final.
+      const { error: deleteError } = await supabase
+        .from('service_order_items')
+        .delete()
+        .eq('service_order_id', id);
+
+      if (deleteError) throw deleteError;
+
+      const validItems = items.filter((item) => item.description.trim() !== "");
+      if (validItems.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('service_order_items')
+          .insert(
+            validItems.map((item, index) => ({
+              service_order_id: id,
+              description: item.description.trim(),
+              quantity: item.quantity,
+              unit_value_cents: item.unit_value_cents,
+              position: index,
+            }))
+          );
+
+        if (itemsError) throw itemsError;
+      }
+
+      // Mantém o cadastro do cliente em dia com o que foi editado na OS
+      if (data.customer_cpf) {
+        await supabase.from('customers').upsert(
+          {
+            full_name: data.customer_full_name!,
+            cpf: cleanCPF(data.customer_cpf),
+            phone: data.customer_phone ? cleanPhone(data.customer_phone) : null,
+            address_street: data.address_street,
+            address_number: data.address_number,
+            address_neighborhood: data.address_neighborhood,
+            address_city: data.address_city,
+            address_complement: data.address_complement || null,
+          },
+          { onConflict: 'cpf' }
+        );
+      }
+
       return result;
     },
     onSuccess: (data) => {
@@ -183,14 +274,6 @@ export default function EditServiceOrder() {
   const onSubmit = (data: UpdateServiceOrderData) => {
     updateMutation.mutate(data);
   };
-
-  const [repairValue, setRepairValue] = useState("");
-
-  // Atualizar valor do reparo no form quando string muda
-  useEffect(() => {
-    const cents = repairValue ? parseFloat(repairValue.replace(',', '.')) * 100 : 0;
-    form.setValue('repair_value_cents', Math.round(cents));
-  }, [repairValue, form]);
 
   if (authLoading || isLoading) {
     return (
@@ -354,26 +437,51 @@ export default function EditServiceOrder() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="customer_cpf"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CPF</FormLabel>
-                        <FormControl>
-                          <InputMask
-                            mask="999.999.999-99"
-                            {...field}
-                          >
-                            {(inputProps: any) => (
-                              <Input {...inputProps} placeholder="000.000.000-00" />
-                            )}
-                          </InputMask>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="customer_cpf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CPF</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="999.999.999-99"
+                              {...field}
+                            >
+                              {(inputProps: any) => (
+                                <Input {...inputProps} placeholder="000.000.000-00" />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="customer_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="(99) 99999-9999"
+                              maskChar={null}
+                              {...field}
+                              value={field.value ?? ""}
+                            >
+                              {(inputProps: any) => (
+                                <Input {...inputProps} placeholder="(37) 99999-9999" />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Dados do Equipamento */}
@@ -397,6 +505,7 @@ export default function EditServiceOrder() {
                               <SelectItem value="PISTOLA">Pistola</SelectItem>
                               <SelectItem value="CARABINA">Carabina</SelectItem>
                               <SelectItem value="REVOLVER">Revólver</SelectItem>
+                              <SelectItem value="ESPINGARDA">Espingarda</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -498,25 +607,6 @@ export default function EditServiceOrder() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="repair_value_cents"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor do Reparo</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              placeholder="0,00"
-                              value={repairValue}
-                              onChange={(e) => setRepairValue(e.target.value)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
                   <FormField
@@ -536,6 +626,18 @@ export default function EditServiceOrder() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Itens do reparo */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Itens do Reparo</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Lance peças e serviços separadamente. O valor total é
+                      somado automaticamente.
+                    </p>
+                  </div>
+                  <ServiceOrderItems items={items} onChange={setItems} />
                 </div>
 
                 {/* Anexos (fotos/vídeos) */}

@@ -33,6 +33,39 @@ export function validateCPF(cpf: string): boolean {
   return digits[9] === firstDigit && digits[10] === secondDigit;
 }
 
+// Telefone: aceita fixo (10 dígitos) ou celular (11), com ou sem máscara
+const phoneSchema = z.string()
+  .refine((v) => {
+    const digits = v.replace(/\D/g, '');
+    return digits.length === 10 || digits.length === 11;
+  }, "Telefone inválido (use DDD + número)");
+
+// Schema do cadastro de clientes
+export const customerSchema = z.object({
+  full_name: z.string().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
+  cpf: z.string()
+    .min(1, "CPF é obrigatório")
+    .refine((cpf) => validateCPF(cpf), "CPF inválido"),
+  phone: phoneSchema.optional().or(z.literal("")),
+  address_street: z.string().optional().nullable(),
+  address_number: z.string().optional().nullable(),
+  address_neighborhood: z.string().optional().nullable(),
+  address_city: z.string().optional().nullable(),
+  address_complement: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export type CustomerFormData = z.infer<typeof customerSchema>;
+
+// Schema de um item lançado na OS
+export const serviceOrderItemSchema = z.object({
+  description: z.string().min(1, "Descrição é obrigatória").max(255, "Descrição muito longa"),
+  quantity: z.number().int("Quantidade deve ser inteira").min(1, "Quantidade mínima é 1"),
+  unit_value_cents: z.number().min(0, "Valor deve ser positivo"),
+});
+
+export type ServiceOrderItemFormData = z.infer<typeof serviceOrderItemSchema>;
+
 // Schema para criação de OS (alinhado com tipos do Supabase)
 export const createServiceOrderSchema = z.object({
   customer_full_name: z.string().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
@@ -46,7 +79,8 @@ export const createServiceOrderSchema = z.object({
   customer_cpf: z.string()
     .min(1, "CPF é obrigatório")
     .refine((cpf) => validateCPF(cpf), "CPF inválido"),
-  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER'], {
+  customer_phone: phoneSchema.optional().or(z.literal("")),
+  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER', 'ESPINGARDA'], {
     message: "Produto é obrigatório"
   }),
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo"),
@@ -85,7 +119,8 @@ export const updateServiceOrderSchema = z.object({
     .min(1, "CPF é obrigatório")
     .refine((cpf) => validateCPF(cpf), "CPF inválido")
     .optional(),
-  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER']).optional(),
+  customer_phone: phoneSchema.optional().or(z.literal("")),
+  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER', 'ESPINGARDA']).optional(),
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo").optional(),
   type: z.enum(['FOGO', 'PRESSAO', 'AIRSOFT']).optional(),
   authority: z.enum(['EXERCITO', 'POLICIA_FEDERAL']).optional().nullable(),

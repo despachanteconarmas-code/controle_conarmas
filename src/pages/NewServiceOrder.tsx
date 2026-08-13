@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { createServiceOrderSchema, CreateServiceOrderData } from "@/lib/validations";
-import { formatCurrency, formatDate, cleanCPF } from "@/lib/formatters";
+import { formatCurrency, formatDate, cleanCPF, cleanPhone, formatPhone } from "@/lib/formatters";
 import { ArrowLeft, Save, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,7 +25,9 @@ import { cn } from "@/lib/utils";
 import InputMask from "react-input-mask";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { FileUpload } from "@/components/FileUpload";
-import { ServiceOrderFile } from "@/types/database";
+import { ServiceOrderFile, Customer } from "@/types/database";
+import { CustomerPicker } from "@/components/CustomerPicker";
+import { ServiceOrderItems, ItemDraft, calculateItemsTotal } from "@/components/ServiceOrderItems";
 
 export default function NewServiceOrder() {
   const { user, loading: authLoading } = useAuth();
@@ -51,6 +53,7 @@ export default function NewServiceOrder() {
       address_city: "",
       address_complement: "",
       customer_cpf: "",
+      customer_phone: "",
       product: undefined,
       serial_number: "",
       type: undefined,
@@ -61,10 +64,59 @@ export default function NewServiceOrder() {
     }
   });
 
+  // Itens do reparo. O valor total da OS é a soma deles.
+  const [items, setItems] = useState<ItemDraft[]>([]);
+  // Cliente escolhido na busca; nulo quando é um cadastro novo
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+  // Preenche o formulário com os dados de um cliente já cadastrado
+  const applyCustomer = (customer: Customer) => {
+    setSelectedCustomerId(customer.id);
+    form.setValue('customer_full_name', customer.full_name);
+    form.setValue('customer_cpf', customer.cpf);
+    form.setValue('customer_phone', customer.phone ? formatPhone(customer.phone) : "");
+    form.setValue('address_street', customer.address_street ?? "");
+    form.setValue('address_number', customer.address_number ?? "");
+    form.setValue('address_neighborhood', customer.address_neighborhood ?? "");
+    form.setValue('address_city', customer.address_city ?? "");
+    form.setValue('address_complement', customer.address_complement ?? "");
+    toast({
+      title: "Cliente carregado",
+      description: `Dados de ${customer.full_name} preenchidos automaticamente.`,
+    });
+  };
+
   // Mutation para criar OS
   const createMutation = useMutation({
     mutationFn: async (data: CreateServiceOrderData) => {
+      const cpf = cleanCPF(data.customer_cpf);
+      const phone = data.customer_phone ? cleanPhone(data.customer_phone) : null;
+
+      // Cadastra ou atualiza o cliente antes da OS, para que ele fique
+      // disponível na próxima vez que essa pessoa aparecer
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .upsert(
+          {
+            full_name: data.customer_full_name,
+            cpf,
+            phone,
+            address_street: data.address_street,
+            address_number: data.address_number,
+            address_neighborhood: data.address_neighborhood,
+            address_city: data.address_city,
+            address_complement: data.address_complement || null,
+          },
+          { onConflict: 'cpf' }
+        )
+        .select()
+        .single();
+
+      if (customerError) throw customerError;
+
       const insertData = {
+        customer_id: customer?.id ?? selectedCustomerId,
+        customer_phone: phone,
         customer_full_name: data.customer_full_name,
         customer_address: `${data.address_street}, ${data.address_number}${data.address_complement ? ' - ' + data.address_complement : ''}, ${data.address_neighborhood} - ${data.address_city}`,
         address_street: data.address_street,
@@ -78,7 +130,9 @@ export default function NewServiceOrder() {
         type: data.type,
         authority: data.authority || null,
         entry_date: data.entry_date.toISOString(),
-        repair_value_cents: data.repair_value_cents,
+        // Soma dos itens. O trigger no banco recalcula a cada mudança
+        // de item; este valor cobre o caso de OS sem itens lançados.
+        repair_value_cents: calculateItemsTotal(items),
         notes: data.notes || null,
       } as any;
 
@@ -89,6 +143,24 @@ export default function NewServiceOrder() {
         .single();
 
       if (error) throw error;
+
+      // Itens do reparo, na ordem em que foram lançados
+      const validItems = items.filter((item) => item.description.trim() !== "");
+      if (validItems.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('service_order_items')
+          .insert(
+            validItems.map((item, index) => ({
+              service_order_id: result.id,
+              description: item.description.trim(),
+              quantity: item.quantity,
+              unit_value_cents: item.unit_value_cents,
+              position: index,
+            }))
+          );
+
+        if (itemsError) throw itemsError;
+      }
 
       // Finalizar sessão de upload se houver arquivos
       if (uploadSessionId && stagingFiles.length > 0) {
@@ -220,7 +292,10 @@ export default function NewServiceOrder() {
                 {/* Dados do Cliente */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Dados do Cliente</h3>
-                  
+
+                  {/* Reaproveita um cliente já cadastrado em vez de redigitar */}
+                  <CustomerPicker onSelect={applyCustomer} />
+
                   <FormField
                     control={form.control}
                     name="customer_full_name"
@@ -311,26 +386,51 @@ export default function NewServiceOrder() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="customer_cpf"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CPF *</FormLabel>
-                        <FormControl>
-                          <InputMask
-                            mask="999.999.999-99"
-                            {...field}
-                          >
-                            {(inputProps: any) => (
-                              <Input {...inputProps} placeholder="000.000.000-00" />
-                            )}
-                          </InputMask>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="customer_cpf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CPF *</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="999.999.999-99"
+                              {...field}
+                            >
+                              {(inputProps: any) => (
+                                <Input {...inputProps} placeholder="000.000.000-00" />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="customer_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="(99) 99999-9999"
+                              maskChar={null}
+                              {...field}
+                              value={field.value ?? ""}
+                            >
+                              {(inputProps: any) => (
+                                <Input {...inputProps} placeholder="(37) 99999-9999" />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Dados do Equipamento */}
@@ -354,6 +454,7 @@ export default function NewServiceOrder() {
                               <SelectItem value="PISTOLA">Pistola</SelectItem>
                               <SelectItem value="CARABINA">Carabina</SelectItem>
                               <SelectItem value="REVOLVER">Revólver</SelectItem>
+                              <SelectItem value="ESPINGARDA">Espingarda</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -428,7 +529,7 @@ export default function NewServiceOrder() {
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Dados da Ordem de Serviço</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <FormField
                       control={form.control}
                       name="entry_date"
@@ -473,23 +574,6 @@ export default function NewServiceOrder() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="repair_value_cents"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor do Reparo *</FormLabel>
-                          <FormControl>
-                            <CurrencyInput
-                              value={field.value}
-                              onValueChange={field.onChange}
-                              placeholder="R$ 0,00"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </div>
 
                   <FormField
@@ -509,6 +593,18 @@ export default function NewServiceOrder() {
                       </FormItem>
                     )}
                   />
+                </div>
+
+                {/* Itens do reparo */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Itens do Reparo</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Lance peças e serviços separadamente. O valor total é
+                      somado automaticamente.
+                    </p>
+                  </div>
+                  <ServiceOrderItems items={items} onChange={setItems} />
                 </div>
 
                 {/* Anexos */}

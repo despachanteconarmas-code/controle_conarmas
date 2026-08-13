@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { ServiceOrder, ServiceOrderFilters, statusConfig } from "@/types/database";
+import { ServiceOrder, ServiceOrderFilters, ServiceOrderItem, statusConfig } from "@/types/database";
 import { formatCurrency, formatDate, statusLabels, isInWarranty, cleanCPF, formatCPF } from "@/lib/formatters";
 import { generateServiceOrderPDF } from "@/lib/pdfGenerator";
 import { Search, Plus, Eye, Edit, FileText, Filter, BarChart3, ShieldCheck, Trash2 } from "lucide-react";
@@ -129,7 +129,14 @@ export default function Dashboard() {
 
   const handleGeneratePDF = async (order: ServiceOrder) => {
     try {
-      await generateServiceOrderPDF(order);
+      // O PDF detalha os itens, que não vêm na listagem do Dashboard
+      const { data: items } = await supabase
+        .from('service_order_items')
+        .select('*')
+        .eq('service_order_id', order.id)
+        .order('position');
+
+      await generateServiceOrderPDF(order, (items ?? []) as unknown as ServiceOrderItem[]);
       toast({
         title: "PDF gerado com sucesso!",
         description: `O PDF da ${order.os_number} foi baixado.`,
