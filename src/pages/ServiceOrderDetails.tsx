@@ -26,12 +26,10 @@ import {
   formatCPF,
   formatPhone,
   statusLabels,
-  productLabels, 
-  typeLabels, 
-  authorityLabels,
   isInWarranty,
   warrantyDaysLeft
 } from "@/lib/formatters";
+import { useOptions } from "@/hooks/useOptions";
 import { generateServiceOrderPDF } from "@/lib/pdfGenerator";
 import { 
   ArrowLeft, 
@@ -82,6 +80,11 @@ export default function ServiceOrderDetails() {
     },
     enabled: !!id && !!user,
   });
+
+  // Rótulos de produto/tipo/autoridade vêm de option_lists
+  const productOptions = useOptions('product');
+  const typeOptions = useOptions('type');
+  const authorityOptions = useOptions('authority');
 
   // Itens que compõem o valor do reparo
   const { data: items = [] } = useQuery({
@@ -475,7 +478,7 @@ export default function ServiceOrderDetails() {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Produto</label>
-                <p className="text-base">{productLabels[serviceOrder.product]}</p>
+                <p className="text-base">{productOptions.getLabel(serviceOrder.product)}</p>
               </div>
               
               <div>
@@ -485,13 +488,13 @@ export default function ServiceOrderDetails() {
               
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Tipo</label>
-                <p className="text-base">{typeLabels[serviceOrder.type]}</p>
+                <p className="text-base">{typeOptions.getLabel(serviceOrder.type)}</p>
               </div>
 
               {serviceOrder.authority && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Autoridade</label>
-                  <p className="text-base">{authorityLabels[serviceOrder.authority]}</p>
+                  <p className="text-base">{authorityOptions.getLabel(serviceOrder.authority)}</p>
                 </div>
               )}
             </CardContent>

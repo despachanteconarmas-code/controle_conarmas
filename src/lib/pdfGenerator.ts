@@ -2,6 +2,29 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ServiceOrder, ServiceOrderItem } from '@/types/database';
 import { formatCurrency, formatDate, formatCPF, formatPhone, productLabels, typeLabels, authorityLabels, statusLabels } from './formatters';
+import { supabase } from '@/integrations/supabase/client';
+
+// Produto, tipo e autoridade são administráveis pelo usuário, então os
+// rótulos vêm do banco. Os mapas estáticos ficam como fallback, para o
+// PDF não sair com o código cru se a consulta falhar.
+const loadOptionLabels = async (): Promise<Record<string, string>> => {
+  const labels: Record<string, string> = {
+    ...productLabels,
+    ...typeLabels,
+    ...authorityLabels,
+  };
+
+  try {
+    const { data } = await supabase.from('option_lists').select('value, label');
+    (data ?? []).forEach((option) => {
+      labels[option.value] = option.label;
+    });
+  } catch {
+    // Mantém apenas o fallback
+  }
+
+  return labels;
+};
 
 // URL da logo da empresa
 const LOGO_URL = 'https://utwujmzfwpyixczstdjw.supabase.co/storage/v1/object/sign/logo/CAPA%20REDES%20SOCIAIS.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NmRkNTQxYi00NDkyLTRjYTUtOTg2ZC01ZDc3NjI5ODU5MTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dvL0NBUEEgUkVERVMgU09DSUFJUy5wbmciLCJpYXQiOjE3NTkzNDkwNDcsImV4cCI6MTkxNzAyOTA0N30.HuUX3EU4YERLcy-vzGdmkckhMY6gXJU17v0UC3ffz0Y';
@@ -22,7 +45,9 @@ export const generateServiceOrderPDF = async (
   items: ServiceOrderItem[] = []
 ) => {
   const doc = new jsPDF();
-  
+  const optionLabels = await loadOptionLabels();
+  const labelOf = (value?: string | null) => (value ? optionLabels[value] ?? value : '');
+
   // Configurações
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -150,13 +175,13 @@ export const generateServiceOrderPDF = async (
   doc.setFontSize(10);
 
   const equipmentData = [
-    ['Produto:', productLabels[order.product]],
-    ['Tipo:', typeLabels[order.type]],
+    ['Produto:', labelOf(order.product)],
+    ['Tipo:', labelOf(order.type)],
     ['Número de Série:', order.serial_number],
   ];
 
   if (order.authority) {
-    equipmentData.push(['Autoridade Competente:', authorityLabels[order.authority]]);
+    equipmentData.push(['Autoridade Competente:', labelOf(order.authority)]);
   }
 
   equipmentData.forEach(([label, value]) => {

@@ -27,6 +27,7 @@ import { CurrencyInput } from "@/components/CurrencyInput";
 import { FileUpload } from "@/components/FileUpload";
 import { ServiceOrderFile, Customer } from "@/types/database";
 import { CustomerPicker } from "@/components/CustomerPicker";
+import { ManagedSelect } from "@/components/ManagedSelect";
 import { ServiceOrderItems, ItemDraft, calculateItemsTotal } from "@/components/ServiceOrderItems";
 
 export default function NewServiceOrder() {
@@ -444,19 +445,14 @@ export default function NewServiceOrder() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Produto *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o produto" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="PISTOLA">Pistola</SelectItem>
-                              <SelectItem value="CARABINA">Carabina</SelectItem>
-                              <SelectItem value="REVOLVER">Revólver</SelectItem>
-                              <SelectItem value="ESPINGARDA">Espingarda</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ManagedSelect
+                              category="product"
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Selecione o produto"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -468,18 +464,14 @@ export default function NewServiceOrder() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Tipo *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o tipo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="FOGO">Arma de Fogo</SelectItem>
-                              <SelectItem value="PRESSAO">Pressão</SelectItem>
-                              <SelectItem value="AIRSOFT">Airsoft</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ManagedSelect
+                              category="type"
+                              value={field.value}
+                              onChange={field.onChange}
+                              placeholder="Selecione o tipo"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -507,17 +499,14 @@ export default function NewServiceOrder() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Autoridade Competente *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione a autoridade" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="EXERCITO">Exército</SelectItem>
-                              <SelectItem value="POLICIA_FEDERAL">Polícia Federal</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <ManagedSelect
+                              category="authority"
+                              value={field.value || undefined}
+                              onChange={field.onChange}
+                              placeholder="Selecione a autoridade"
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

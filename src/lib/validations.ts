@@ -80,14 +80,12 @@ export const createServiceOrderSchema = z.object({
     .min(1, "CPF é obrigatório")
     .refine((cpf) => validateCPF(cpf), "CPF inválido"),
   customer_phone: phoneSchema.optional().or(z.literal("")),
-  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER', 'ESPINGARDA'], {
-    message: "Produto é obrigatório"
-  }),
+  // Produto, tipo e autoridade saem de `option_lists` e podem ser
+  // criados pelo usuário, então não cabe mais um enum fechado aqui
+  product: z.string().min(1, "Produto é obrigatório"),
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo"),
-  type: z.enum(['FOGO', 'PRESSAO', 'AIRSOFT'], {
-    message: "Tipo é obrigatório"
-  }),
-  authority: z.enum(['EXERCITO', 'POLICIA_FEDERAL']).optional().nullable(),
+  type: z.string().min(1, "Tipo é obrigatório"),
+  authority: z.string().optional().nullable(),
   entry_date: z.date({
     message: "Data de entrada é obrigatória"
   }),
@@ -120,10 +118,10 @@ export const updateServiceOrderSchema = z.object({
     .refine((cpf) => validateCPF(cpf), "CPF inválido")
     .optional(),
   customer_phone: phoneSchema.optional().or(z.literal("")),
-  product: z.enum(['PISTOLA', 'CARABINA', 'REVOLVER', 'ESPINGARDA']).optional(),
+  product: z.string().min(1, "Produto é obrigatório").optional(),
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo").optional(),
-  type: z.enum(['FOGO', 'PRESSAO', 'AIRSOFT']).optional(),
-  authority: z.enum(['EXERCITO', 'POLICIA_FEDERAL']).optional().nullable(),
+  type: z.string().min(1, "Tipo é obrigatório").optional(),
+  authority: z.string().optional().nullable(),
   repair_value_cents: z.number().min(0, "Valor deve ser positivo").optional(),
   status: z.enum(['RECEBIDA', 'AGUARDANDO_ORCAMENTO', 'EM_MANUTENCAO', 'AGUARDANDO_PECAS', 'PRONTA', 'ENTREGUE']).optional(),
   notes: z.string().optional().nullable(),

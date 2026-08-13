@@ -21,6 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ServiceOrder, ServiceOrderFilters, ServiceOrderItem, statusConfig } from "@/types/database";
+import { useOptions } from "@/hooks/useOptions";
 import { formatCurrency, formatDate, statusLabels, isInWarranty, cleanCPF, formatCPF } from "@/lib/formatters";
 import { generateServiceOrderPDF } from "@/lib/pdfGenerator";
 import { Search, Plus, Eye, Edit, FileText, Filter, BarChart3, ShieldCheck, Trash2 } from "lucide-react";
@@ -30,6 +31,7 @@ import InputMask from "react-input-mask";
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
+  const productOptions = useOptions('product');
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -432,7 +434,7 @@ export default function Dashboard() {
                             {formatCPF(order.customer_cpf)}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {order.product}
+                            {productOptions.getLabel(order.product)}
                           </TableCell>
                           <TableCell className="hidden lg:table-cell">
                             {order.serial_number}

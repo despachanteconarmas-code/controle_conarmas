@@ -175,6 +175,39 @@ export type Database = {
         }
         Relationships: []
       }
+      option_lists: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          position: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          position?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          position?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       service_order_items: {
         Row: {
           created_at: string

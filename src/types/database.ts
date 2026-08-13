@@ -5,10 +5,11 @@ export interface ServiceOrder {
   customer_full_name: string;
   customer_address: string;
   customer_cpf: string;
-  product: 'PISTOLA' | 'CARABINA' | 'REVOLVER' | 'ESPINGARDA';
+// Valores livres: vêm de `option_lists`, administrada pelo usuário
+  product: string;
   serial_number: string;
-  type: 'FOGO' | 'PRESSAO' | 'AIRSOFT';
-  authority?: 'EXERCITO' | 'POLICIA_FEDERAL' | null;
+  type: string;
+  authority?: string | null;
   entry_date: string;
   repair_value_cents: number;
   status: 'RECEBIDA' | 'AGUARDANDO_ORCAMENTO' | 'EM_MANUTENCAO' | 'AGUARDANDO_PECAS' | 'PRONTA' | 'ENTREGUE';
@@ -27,6 +28,21 @@ export interface ServiceOrder {
 // Vínculo com o cadastro de clientes
   customer_id?: string | null;
   customer_phone?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Listas administráveis pelo usuário (Produto, Tipo, Autoridade).
+// Status não entra aqui: dispara triggers de garantia e tem cores fixas.
+export type OptionCategory = 'product' | 'type' | 'authority';
+
+export interface OptionList {
+  id: string;
+  category: OptionCategory;
+  value: string;
+  label: string;
+  position: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
