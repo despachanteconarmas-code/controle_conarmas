@@ -34,7 +34,10 @@ jobs:
       - name: Instalar Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Versão fixa de propósito: com `latest` a action consulta a API
+          # do GitHub a cada execução e o job quebra quando bate no rate
+          # limit. Fixar também deixa o resultado reproduzível.
+          version: 2.114.0
 
       - name: Migrations pendentes (dry-run)
         env:
