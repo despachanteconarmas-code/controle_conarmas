@@ -103,9 +103,24 @@ export function ManagedSelect({
     }
   };
 
+  // O Select só pode montar depois que as opções chegarem. O Radix
+  // resolve o rótulo do valor a partir dos SelectItem existentes no
+  // momento em que o valor é definido, e não refaz essa conta quando os
+  // itens aparecem depois. Montando vazio, abrir uma OS já gravada
+  // mostrava "Selecione..." no lugar do valor salvo em Produto, Tipo,
+  // Marca e Calibre -- e, como o campo de Autoridade e o do CRAF só
+  // aparecem quando o Tipo é arma de fogo, os dois sumiam da tela.
+  if (isLoading) {
+    return (
+      <div className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+        Carregando...
+      </div>
+    );
+  }
+
   return (
     <>
-      <Select value={value || undefined} onValueChange={onChange} disabled={disabled || isLoading}>
+      <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger>
           <SelectValue placeholder={isLoading ? "Carregando..." : placeholder} />
         </SelectTrigger>

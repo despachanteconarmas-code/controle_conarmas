@@ -100,6 +100,8 @@ export const createServiceOrderSchema = z.object({
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo"),
   type: z.string().min(1, "Tipo é obrigatório"),
   authority: z.string().optional().nullable(),
+  // Opcional: o cliente nem sempre traz o documento ao deixar a arma
+  craf_number: z.string().max(50, "Número do CRAF muito longo").optional().nullable(),
   // Calibre e marca vêm de `option_lists`; modelo é digitado
   caliber: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
@@ -141,6 +143,7 @@ export const updateServiceOrderSchema = z.object({
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo").optional(),
   type: z.string().min(1, "Tipo é obrigatório").optional(),
   authority: z.string().optional().nullable(),
+  craf_number: z.string().max(50, "Número do CRAF muito longo").optional().nullable(),
   caliber: z.string().optional().nullable(),
   brand: z.string().optional().nullable(),
   model: z.string().max(255, "Modelo muito longo").optional().nullable(),

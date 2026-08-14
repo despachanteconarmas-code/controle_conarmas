@@ -10,6 +10,8 @@ export interface ServiceOrder {
   serial_number: string;
   type: string;
   authority?: string | null;
+// Registro da arma (SIGMA/Exército ou SINARM/PF). Só para arma de fogo
+  craf_number?: string | null;
 // Calibre e marca também saem de `option_lists`; modelo é texto livre
   caliber?: string | null;
   brand?: string | null;

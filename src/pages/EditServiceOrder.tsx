@@ -104,6 +104,7 @@ export default function EditServiceOrder() {
       serial_number: "",
       type: undefined,
       authority: undefined,
+      craf_number: "",
       caliber: undefined,
       brand: undefined,
       model: "",
@@ -184,6 +185,7 @@ export default function EditServiceOrder() {
         serial_number: serviceOrder.serial_number,
         type: serviceOrder.type,
         authority: serviceOrder.authority || undefined,
+        craf_number: serviceOrder.craf_number || "",
         caliber: serviceOrder.caliber || undefined,
         brand: serviceOrder.brand || undefined,
         model: serviceOrder.model || "",
@@ -215,6 +217,7 @@ export default function EditServiceOrder() {
         serial_number: data.serial_number,
         type: data.type,
         authority: data.authority || null,
+        craf_number: data.craf_number?.trim() || null,
         caliber: data.caliber || null,
         brand: data.brand || null,
         model: data.model?.trim() || null,
@@ -663,25 +666,46 @@ export default function EditServiceOrder() {
                     />
                   </div>
 
+                  {/* Só para arma de fogo: autoridade e registro da arma */}
                   {form.watch('type') === 'FOGO' && (
-                    <FormField
-                      control={form.control}
-                      name="authority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Autoridade Competente</FormLabel>
-                          <FormControl>
-                            <ManagedSelect
-                              category="authority"
-                              value={field.value || undefined}
-                              onChange={field.onChange}
-                              placeholder="Selecione a autoridade"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="authority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Autoridade Competente</FormLabel>
+                            <FormControl>
+                              <ManagedSelect
+                                category="authority"
+                                value={field.value || undefined}
+                                onChange={field.onChange}
+                                placeholder="Selecione a autoridade"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="craf_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Número do CRAF</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                value={field.value ?? ""}
+                                placeholder="Registro da arma"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   )}
                 </div>
 

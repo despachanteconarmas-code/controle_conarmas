@@ -248,6 +248,9 @@ export const generateServiceOrderPDF = async (
   if (order.authority) {
     equipmentData.push(['Autoridade Competente:', labelOf(order.authority)]);
   }
+  if (order.craf_number) {
+    equipmentData.push(['Número do CRAF:', order.craf_number]);
+  }
 
   equipmentData.forEach(([label, value]) => {
     ensureSpace(7);

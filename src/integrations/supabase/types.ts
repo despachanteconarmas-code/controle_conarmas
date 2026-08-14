@@ -263,6 +263,7 @@ export type Database = {
           authority: string | null
           brand: string | null
           caliber: string | null
+          craf_number: string | null
           created_at: string
           customer_address: string
           customer_address_full: string | null
@@ -296,6 +297,7 @@ export type Database = {
           authority?: string | null
           brand?: string | null
           caliber?: string | null
+          craf_number?: string | null
           created_at?: string
           customer_address: string
           customer_address_full?: string | null
@@ -329,6 +331,7 @@ export type Database = {
           authority?: string | null
           brand?: string | null
           caliber?: string | null
+          craf_number?: string | null
           created_at?: string
           customer_address?: string
           customer_address_full?: string | null

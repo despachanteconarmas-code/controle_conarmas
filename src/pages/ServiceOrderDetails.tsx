@@ -528,6 +528,13 @@ export default function ServiceOrderDetails() {
                   <p className="text-base">{authorityOptions.getLabel(serviceOrder.authority)}</p>
                 </div>
               )}
+
+              {serviceOrder.craf_number && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Número do CRAF</label>
+                  <p className="text-base font-mono">{serviceOrder.craf_number}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
