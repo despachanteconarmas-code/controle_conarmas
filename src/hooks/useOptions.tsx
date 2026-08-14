@@ -9,8 +9,11 @@ const fallbackLabels: Record<OptionCategory, Record<string, string>> = {
   product: productLabels,
   type: typeLabels,
   authority: authorityLabels,
-  // Itens do reparo nasceram já no banco, não têm lista fixa anterior
+  // Itens do reparo, calibre e marca nasceram já no banco: não existe
+  // lista fixa anterior para servir de fallback
   service_item: {},
+  caliber: {},
+  brand: {},
 };
 
 // Marcas de acento que sobram depois do normalize("NFD")

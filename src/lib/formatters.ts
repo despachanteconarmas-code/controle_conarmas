@@ -30,6 +30,21 @@ export function cleanPhone(phone: string): string {
   return phone.replace(/\D/g, '');
 }
 
+// Formatação de CEP: 35500-000
+export function formatZipCode(zip?: string | null): string {
+  if (!zip) return '';
+  const cleaned = zip.replace(/\D/g, '');
+  if (cleaned.length === 8) {
+    return cleaned.replace(/(\d{5})(\d{3})/, '$1-$2');
+  }
+  return zip;
+}
+
+// Remove máscara do CEP
+export function cleanZipCode(zip: string): string {
+  return zip.replace(/\D/g, '');
+}
+
 // Formatação de valores monetários (centavos para BRL)
 export function formatCurrency(cents: number): string {
   return new Intl.NumberFormat('pt-BR', {

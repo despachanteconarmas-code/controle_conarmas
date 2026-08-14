@@ -40,6 +40,16 @@ const phoneSchema = z.string()
     return digits.length === 10 || digits.length === 11;
   }, "Telefone inválido (use DDD + número)");
 
+// CEP: opcional, mas se for preenchido tem que estar completo, senão a
+// busca automática do endereço não roda e o campo fica só atrapalhando
+const zipCodeSchema = z.string()
+  .refine((v) => {
+    const digits = v.replace(/\D/g, '');
+    return digits.length === 0 || digits.length === 8;
+  }, "CEP inválido (use o formato 00000-000)")
+  .optional()
+  .nullable();
+
 // Schema do cadastro de clientes
 // `.trim()` em nomes e endereços: espaço no início bagunçava a ordem
 // alfabética da lista de clientes
@@ -49,6 +59,7 @@ export const customerSchema = z.object({
     .min(1, "CPF é obrigatório")
     .refine((cpf) => validateCPF(cpf), "CPF inválido"),
   phone: phoneSchema.optional().or(z.literal("")),
+  address_zip_code: zipCodeSchema,
   address_street: z.string().optional().nullable(),
   address_number: z.string().optional().nullable(),
   address_neighborhood: z.string().optional().nullable(),
@@ -71,6 +82,7 @@ export type ServiceOrderItemFormData = z.infer<typeof serviceOrderItemSchema>;
 // Schema para criação de OS (alinhado com tipos do Supabase)
 export const createServiceOrderSchema = z.object({
   customer_full_name: z.string().trim().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo"),
+  address_zip_code: zipCodeSchema,
   address_street: z.string().trim().min(1, "Rua é obrigatória"),
   address_number: z.string()
     .min(1, "Número é obrigatório")
@@ -88,6 +100,10 @@ export const createServiceOrderSchema = z.object({
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo"),
   type: z.string().min(1, "Tipo é obrigatório"),
   authority: z.string().optional().nullable(),
+  // Calibre e marca vêm de `option_lists`; modelo é digitado
+  caliber: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  model: z.string().max(255, "Modelo muito longo").optional().nullable(),
   entry_date: z.date({
     message: "Data de entrada é obrigatória"
   }),
@@ -107,6 +123,7 @@ export const createServiceOrderSchema = z.object({
 // Schema para atualização de OS
 export const updateServiceOrderSchema = z.object({
   customer_full_name: z.string().trim().min(1, "Nome completo é obrigatório").max(255, "Nome muito longo").optional(),
+  address_zip_code: zipCodeSchema,
   address_street: z.string().trim().min(1, "Rua é obrigatória").optional(),
   address_number: z.string()
     .min(1, "Número é obrigatório")
@@ -124,6 +141,9 @@ export const updateServiceOrderSchema = z.object({
   serial_number: z.string().min(1, "Número de série é obrigatório").max(100, "Número de série muito longo").optional(),
   type: z.string().min(1, "Tipo é obrigatório").optional(),
   authority: z.string().optional().nullable(),
+  caliber: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  model: z.string().max(255, "Modelo muito longo").optional().nullable(),
   repair_value_cents: z.number().min(0, "Valor deve ser positivo").optional(),
   status: z.enum(['RECEBIDA', 'AGUARDANDO_ORCAMENTO', 'EM_MANUTENCAO', 'AGUARDANDO_PECAS', 'PRONTA', 'ENTREGUE']).optional(),
   notes: z.string().optional().nullable(),

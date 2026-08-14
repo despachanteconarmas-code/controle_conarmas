@@ -25,6 +25,7 @@ import {
   formatDate,
   formatCPF,
   formatPhone,
+  formatZipCode,
   statusLabels,
   isInWarranty,
   warrantyDaysLeft
@@ -85,6 +86,8 @@ export default function ServiceOrderDetails() {
   const productOptions = useOptions('product');
   const typeOptions = useOptions('type');
   const authorityOptions = useOptions('authority');
+  const caliberOptions = useOptions('caliber');
+  const brandOptions = useOptions('brand');
 
   // Itens que compõem o valor do reparo
   const { data: items = [] } = useQuery({
@@ -464,6 +467,13 @@ export default function ServiceOrderDetails() {
                 <label className="text-sm font-medium text-muted-foreground">Endereço</label>
                 <p className="text-base">{serviceOrder.customer_address}</p>
               </div>
+
+              {serviceOrder.address_zip_code && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">CEP</label>
+                  <p className="text-base">{formatZipCode(serviceOrder.address_zip_code)}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -480,12 +490,33 @@ export default function ServiceOrderDetails() {
                 <label className="text-sm font-medium text-muted-foreground">Produto</label>
                 <p className="text-base">{productOptions.getLabel(serviceOrder.product)}</p>
               </div>
-              
+
+              {serviceOrder.brand && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Marca</label>
+                  <p className="text-base">{brandOptions.getLabel(serviceOrder.brand)}</p>
+                </div>
+              )}
+
+              {serviceOrder.model && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Modelo</label>
+                  <p className="text-base">{serviceOrder.model}</p>
+                </div>
+              )}
+
+              {serviceOrder.caliber && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Calibre</label>
+                  <p className="text-base">{caliberOptions.getLabel(serviceOrder.caliber)}</p>
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Número de Série</label>
                 <p className="text-base font-mono">{serviceOrder.serial_number}</p>
               </div>
-              
+
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Tipo</label>
                 <p className="text-base">{typeOptions.getLabel(serviceOrder.type)}</p>

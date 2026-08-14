@@ -17,7 +17,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { createServiceOrderSchema, CreateServiceOrderData } from "@/lib/validations";
-import { formatCurrency, formatDate, cleanCPF, cleanPhone, formatPhone } from "@/lib/formatters";
+import { formatCurrency, formatDate, cleanCPF, cleanPhone, formatPhone, formatZipCode, cleanZipCode } from "@/lib/formatters";
+import { useCepLookup } from "@/hooks/useCepLookup";
 import { ArrowLeft, Save, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -48,6 +49,7 @@ export default function NewServiceOrder() {
     resolver: zodResolver(createServiceOrderSchema),
     defaultValues: {
       customer_full_name: "",
+      address_zip_code: "",
       address_street: "",
       address_number: "",
       address_neighborhood: "",
@@ -59,6 +61,9 @@ export default function NewServiceOrder() {
       serial_number: "",
       type: undefined,
       authority: undefined,
+      caliber: undefined,
+      brand: undefined,
+      model: "",
       entry_date: new Date(),
       repair_value_cents: 0,
       notes: "",
@@ -70,12 +75,26 @@ export default function NewServiceOrder() {
   // Cliente escolhido na busca; nulo quando é um cadastro novo
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
+  const { lookup: lookupCep, isLoading: cepLoading } = useCepLookup();
+
+  // Preenche rua, bairro e cidade a partir do CEP. Só sobrescreve o que
+  // a ViaCEP devolveu preenchido: CEP de cidade inteira vem sem
+  // logradouro, e apagar o que já foi digitado seria pior que não buscar.
+  const applyCep = async (rawZip: string) => {
+    const address = await lookupCep(rawZip);
+    if (!address) return;
+    if (address.street) form.setValue('address_street', address.street);
+    if (address.neighborhood) form.setValue('address_neighborhood', address.neighborhood);
+    if (address.city) form.setValue('address_city', address.city);
+  };
+
   // Preenche o formulário com os dados de um cliente já cadastrado
   const applyCustomer = (customer: Customer) => {
     setSelectedCustomerId(customer.id);
     form.setValue('customer_full_name', customer.full_name);
     form.setValue('customer_cpf', customer.cpf);
     form.setValue('customer_phone', customer.phone ? formatPhone(customer.phone) : "");
+    form.setValue('address_zip_code', formatZipCode(customer.address_zip_code));
     form.setValue('address_street', customer.address_street ?? "");
     form.setValue('address_number', customer.address_number ?? "");
     form.setValue('address_neighborhood', customer.address_neighborhood ?? "");
@@ -92,6 +111,7 @@ export default function NewServiceOrder() {
     mutationFn: async (data: CreateServiceOrderData) => {
       const cpf = cleanCPF(data.customer_cpf);
       const phone = data.customer_phone ? cleanPhone(data.customer_phone) : null;
+      const zipCode = data.address_zip_code ? cleanZipCode(data.address_zip_code) || null : null;
 
       // Cadastra ou atualiza o cliente antes da OS, para que ele fique
       // disponível na próxima vez que essa pessoa aparecer
@@ -102,6 +122,7 @@ export default function NewServiceOrder() {
             full_name: data.customer_full_name,
             cpf,
             phone,
+            address_zip_code: zipCode,
             address_street: data.address_street,
             address_number: data.address_number,
             address_neighborhood: data.address_neighborhood,
@@ -125,11 +146,15 @@ export default function NewServiceOrder() {
         address_neighborhood: data.address_neighborhood,
         address_city: data.address_city,
         address_complement: data.address_complement || null,
+        address_zip_code: zipCode,
         customer_cpf: cleanCPF(data.customer_cpf),
         product: data.product,
         serial_number: data.serial_number,
         type: data.type,
         authority: data.authority || null,
+        caliber: data.caliber || null,
+        brand: data.brand || null,
+        model: data.model?.trim() || null,
         entry_date: data.entry_date.toISOString(),
         // Soma dos itens. O trigger no banco recalcula a cada mudança
         // de item; este valor cobre o caso de OS sem itens lançados.
@@ -314,6 +339,39 @@ export default function NewServiceOrder() {
                   {/* Endereço em Grid */}
                   <div className="space-y-4">
                     <h4 className="text-md font-medium">Endereço</h4>
+
+                    {/* CEP primeiro: preenche rua, bairro e cidade sozinho */}
+                    <FormField
+                      control={form.control}
+                      name="address_zip_code"
+                      render={({ field }) => (
+                        <FormItem className="md:max-w-[220px]">
+                          <FormLabel>CEP</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="99999-999"
+                              maskChar={null}
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                field.onChange(e);
+                                applyCep(e.target.value);
+                              }}
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  placeholder="35500-000"
+                                  disabled={cepLoading}
+                                />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -478,19 +536,79 @@ export default function NewServiceOrder() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="serial_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Série *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Número de série do equipamento" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="brand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Marca</FormLabel>
+                          <FormControl>
+                            <ManagedSelect
+                              category="brand"
+                              value={field.value || undefined}
+                              onChange={field.onChange}
+                              placeholder="Selecione a marca"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="model"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modelo</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Ex: PT 100"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="caliber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Calibre</FormLabel>
+                          <FormControl>
+                            <ManagedSelect
+                              category="caliber"
+                              value={field.value || undefined}
+                              onChange={field.onChange}
+                              placeholder="Selecione o calibre"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="serial_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de Série *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Número de série do equipamento" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   {form.watch('type') === 'FOGO' && (
                     <FormField

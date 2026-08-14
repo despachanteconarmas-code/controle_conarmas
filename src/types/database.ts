@@ -10,6 +10,10 @@ export interface ServiceOrder {
   serial_number: string;
   type: string;
   authority?: string | null;
+// Calibre e marca também saem de `option_lists`; modelo é texto livre
+  caliber?: string | null;
+  brand?: string | null;
+  model?: string | null;
   entry_date: string;
   repair_value_cents: number;
   status: 'RECEBIDA' | 'AGUARDANDO_ORCAMENTO' | 'EM_MANUTENCAO' | 'AGUARDANDO_PECAS' | 'PRONTA' | 'ENTREGUE';
@@ -24,6 +28,7 @@ export interface ServiceOrder {
   address_neighborhood?: string | null;
   address_city?: string | null;
   address_complement?: string | null;
+  address_zip_code?: string | null;
   customer_address_full?: string | null;
 // Vínculo com o cadastro de clientes
   customer_id?: string | null;
@@ -34,7 +39,13 @@ export interface ServiceOrder {
 
 // Listas administráveis pelo usuário (Produto, Tipo, Autoridade).
 // Status não entra aqui: dispara triggers de garantia e tem cores fixas.
-export type OptionCategory = 'product' | 'type' | 'authority' | 'service_item';
+export type OptionCategory =
+  | 'product'
+  | 'type'
+  | 'authority'
+  | 'service_item'
+  | 'caliber'
+  | 'brand';
 
 export interface OptionList {
   id: string;
@@ -58,6 +69,7 @@ export interface Customer {
   address_neighborhood?: string | null;
   address_city?: string | null;
   address_complement?: string | null;
+  address_zip_code?: string | null;
   notes?: string | null;
   created_at: string;
   updated_at: string;

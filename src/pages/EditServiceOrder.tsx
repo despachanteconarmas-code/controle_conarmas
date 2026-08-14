@@ -16,7 +16,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { updateServiceOrderSchema, UpdateServiceOrderData } from "@/lib/validations";
 import { ServiceOrder, ServiceOrderItem } from "@/types/database";
-import { formatCurrency, formatCPF, cleanCPF, cleanPhone, formatPhone, statusLabels } from "@/lib/formatters";
+import { formatCurrency, formatCPF, cleanCPF, cleanPhone, formatPhone, formatZipCode, cleanZipCode, statusLabels } from "@/lib/formatters";
+import { useCepLookup } from "@/hooks/useCepLookup";
 import { ArrowLeft, Save } from "lucide-react";
 import InputMask from "react-input-mask";
 import { FileUpload } from "@/components/FileUpload";
@@ -91,6 +92,7 @@ export default function EditServiceOrder() {
     resolver: zodResolver(updateServiceOrderSchema),
     defaultValues: {
       customer_full_name: "",
+      address_zip_code: "",
       address_street: "",
       address_number: "",
       address_neighborhood: "",
@@ -102,11 +104,25 @@ export default function EditServiceOrder() {
       serial_number: "",
       type: undefined,
       authority: undefined,
+      caliber: undefined,
+      brand: undefined,
+      model: "",
       repair_value_cents: 0,
       status: 'RECEBIDA',
       notes: "",
     },
   });
+
+  const { lookup: lookupCep, isLoading: cepLoading } = useCepLookup();
+
+  // Só sobrescreve o que a ViaCEP devolveu preenchido; ver useCepLookup
+  const applyCep = async (rawZip: string) => {
+    const address = await lookupCep(rawZip);
+    if (!address) return;
+    if (address.street) form.setValue('address_street', address.street);
+    if (address.neighborhood) form.setValue('address_neighborhood', address.neighborhood);
+    if (address.city) form.setValue('address_city', address.city);
+  };
 
   // Itens do reparo já lançados nesta OS
   const [items, setItems] = useState<ItemDraft[]>([]);
@@ -156,6 +172,7 @@ export default function EditServiceOrder() {
     if (serviceOrder) {
       form.reset({
         customer_full_name: serviceOrder.customer_full_name,
+        address_zip_code: formatZipCode(serviceOrder.address_zip_code),
         address_street: serviceOrder.address_street || "",
         address_number: serviceOrder.address_number || "",
         address_neighborhood: serviceOrder.address_neighborhood || "",
@@ -167,6 +184,9 @@ export default function EditServiceOrder() {
         serial_number: serviceOrder.serial_number,
         type: serviceOrder.type,
         authority: serviceOrder.authority || undefined,
+        caliber: serviceOrder.caliber || undefined,
+        brand: serviceOrder.brand || undefined,
+        model: serviceOrder.model || "",
         repair_value_cents: serviceOrder.repair_value_cents,
         status: serviceOrder.status,
         notes: serviceOrder.notes || "",
@@ -179,8 +199,11 @@ export default function EditServiceOrder() {
     mutationFn: async (data: UpdateServiceOrderData) => {
       if (!id) throw new Error('ID não fornecido');
 
+      const zipCode = data.address_zip_code ? cleanZipCode(data.address_zip_code) || null : null;
+
       const updateData = {
         customer_full_name: data.customer_full_name,
+        address_zip_code: zipCode,
         address_street: data.address_street,
         address_number: data.address_number,
         address_neighborhood: data.address_neighborhood,
@@ -192,6 +215,9 @@ export default function EditServiceOrder() {
         serial_number: data.serial_number,
         type: data.type,
         authority: data.authority || null,
+        caliber: data.caliber || null,
+        brand: data.brand || null,
+        model: data.model?.trim() || null,
         repair_value_cents: calculateItemsTotal(items),
         status: data.status,
         notes: data.notes || null,
@@ -241,6 +267,7 @@ export default function EditServiceOrder() {
             full_name: data.customer_full_name!,
             cpf: cleanCPF(data.customer_cpf),
             phone: data.customer_phone ? cleanPhone(data.customer_phone) : null,
+            address_zip_code: zipCode,
             address_street: data.address_street,
             address_number: data.address_number,
             address_neighborhood: data.address_neighborhood,
@@ -365,6 +392,39 @@ export default function EditServiceOrder() {
                   {/* Endereço em Grid */}
                   <div className="space-y-4">
                     <h4 className="text-md font-medium">Endereço</h4>
+
+                    {/* CEP primeiro: preenche rua, bairro e cidade sozinho */}
+                    <FormField
+                      control={form.control}
+                      name="address_zip_code"
+                      render={({ field }) => (
+                        <FormItem className="md:max-w-[220px]">
+                          <FormLabel>CEP</FormLabel>
+                          <FormControl>
+                            <InputMask
+                              mask="99999-999"
+                              maskChar={null}
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                field.onChange(e);
+                                applyCep(e.target.value);
+                              }}
+                            >
+                              {(inputProps: any) => (
+                                <Input
+                                  {...inputProps}
+                                  placeholder="35500-000"
+                                  disabled={cepLoading}
+                                />
+                              )}
+                            </InputMask>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -529,19 +589,79 @@ export default function EditServiceOrder() {
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="serial_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Série</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Número de série do equipamento" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="brand"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Marca</FormLabel>
+                          <FormControl>
+                            <ManagedSelect
+                              category="brand"
+                              value={field.value || undefined}
+                              onChange={field.onChange}
+                              placeholder="Selecione a marca"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="model"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modelo</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              value={field.value ?? ""}
+                              placeholder="Ex: PT 100"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="caliber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Calibre</FormLabel>
+                          <FormControl>
+                            <ManagedSelect
+                              category="caliber"
+                              value={field.value || undefined}
+                              onChange={field.onChange}
+                              placeholder="Selecione o calibre"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="serial_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Número de Série</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Número de série do equipamento" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   {form.watch('type') === 'FOGO' && (
                     <FormField

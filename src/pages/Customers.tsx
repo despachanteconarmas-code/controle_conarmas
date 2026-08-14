@@ -55,8 +55,11 @@ import {
   cleanPhone,
   formatCurrency,
   formatDate,
+  formatZipCode,
+  cleanZipCode,
   statusLabels,
 } from "@/lib/formatters";
+import { useCepLookup } from "@/hooks/useCepLookup";
 import { Customer, ServiceOrder } from "@/types/database";
 import InputMask from "react-input-mask";
 import { Search, Plus, Pencil, Trash2, FileText, Users } from "lucide-react";
@@ -123,6 +126,7 @@ export default function Customers() {
       full_name: "",
       cpf: "",
       phone: "",
+      address_zip_code: "",
       address_street: "",
       address_number: "",
       address_neighborhood: "",
@@ -132,12 +136,24 @@ export default function Customers() {
     },
   });
 
+  const { lookup: lookupCep, isLoading: cepLoading } = useCepLookup();
+
+  // Só sobrescreve o que a ViaCEP devolveu preenchido; ver useCepLookup
+  const applyCep = async (rawZip: string) => {
+    const address = await lookupCep(rawZip);
+    if (!address) return;
+    if (address.street) form.setValue("address_street", address.street);
+    if (address.neighborhood) form.setValue("address_neighborhood", address.neighborhood);
+    if (address.city) form.setValue("address_city", address.city);
+  };
+
   const openCreate = () => {
     setEditing(null);
     form.reset({
       full_name: "",
       cpf: "",
       phone: "",
+      address_zip_code: "",
       address_street: "",
       address_number: "",
       address_neighborhood: "",
@@ -154,6 +170,7 @@ export default function Customers() {
       full_name: customer.full_name,
       cpf: formatCPF(customer.cpf),
       phone: customer.phone ? formatPhone(customer.phone) : "",
+      address_zip_code: formatZipCode(customer.address_zip_code),
       address_street: customer.address_street ?? "",
       address_number: customer.address_number ?? "",
       address_neighborhood: customer.address_neighborhood ?? "",
@@ -170,6 +187,7 @@ export default function Customers() {
         full_name: data.full_name,
         cpf: cleanCPF(data.cpf),
         phone: data.phone ? cleanPhone(data.phone) : null,
+        address_zip_code: data.address_zip_code ? cleanZipCode(data.address_zip_code) || null : null,
         address_street: data.address_street || null,
         address_number: data.address_number || null,
         address_neighborhood: data.address_neighborhood || null,
@@ -441,6 +459,38 @@ export default function Customers() {
                   )}
                 />
               </div>
+
+              {/* CEP primeiro: preenche rua, bairro e cidade sozinho */}
+              <FormField
+                control={form.control}
+                name="address_zip_code"
+                render={({ field }) => (
+                  <FormItem className="md:max-w-[220px]">
+                    <FormLabel>CEP</FormLabel>
+                    <FormControl>
+                      <InputMask
+                        mask="99999-999"
+                        maskChar={null}
+                        {...field}
+                        value={field.value ?? ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          field.onChange(e);
+                          applyCep(e.target.value);
+                        }}
+                      >
+                        {(inputProps: any) => (
+                          <Input
+                            {...inputProps}
+                            placeholder="35500-000"
+                            disabled={cepLoading}
+                          />
+                        )}
+                      </InputMask>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <FormField

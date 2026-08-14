@@ -137,6 +137,7 @@ export type Database = {
           address_neighborhood: string | null
           address_number: string | null
           address_street: string | null
+          address_zip_code: string | null
           cpf: string
           created_at: string
           full_name: string
@@ -151,6 +152,7 @@ export type Database = {
           address_neighborhood?: string | null
           address_number?: string | null
           address_street?: string | null
+          address_zip_code?: string | null
           cpf: string
           created_at?: string
           full_name: string
@@ -165,6 +167,7 @@ export type Database = {
           address_neighborhood?: string | null
           address_number?: string | null
           address_street?: string | null
+          address_zip_code?: string | null
           cpf?: string
           created_at?: string
           full_name?: string
@@ -256,7 +259,10 @@ export type Database = {
           address_neighborhood: string | null
           address_number: string | null
           address_street: string | null
+          address_zip_code: string | null
           authority: string | null
+          brand: string | null
+          caliber: string | null
           created_at: string
           customer_address: string
           customer_address_full: string | null
@@ -267,6 +273,7 @@ export type Database = {
           delivery_date: string | null
           entry_date: string
           id: string
+          model: string | null
           notes: string | null
           os_number: string
           pdf_url: string | null
@@ -285,7 +292,10 @@ export type Database = {
           address_neighborhood?: string | null
           address_number?: string | null
           address_street?: string | null
+          address_zip_code?: string | null
           authority?: string | null
+          brand?: string | null
+          caliber?: string | null
           created_at?: string
           customer_address: string
           customer_address_full?: string | null
@@ -296,6 +306,7 @@ export type Database = {
           delivery_date?: string | null
           entry_date?: string
           id?: string
+          model?: string | null
           notes?: string | null
           os_number: string
           pdf_url?: string | null
@@ -314,7 +325,10 @@ export type Database = {
           address_neighborhood?: string | null
           address_number?: string | null
           address_street?: string | null
+          address_zip_code?: string | null
           authority?: string | null
+          brand?: string | null
+          caliber?: string | null
           created_at?: string
           customer_address?: string
           customer_address_full?: string | null
@@ -325,6 +339,7 @@ export type Database = {
           delivery_date?: string | null
           entry_date?: string
           id?: string
+          model?: string | null
           notes?: string | null
           os_number?: string
           pdf_url?: string | null
