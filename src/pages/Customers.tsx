@@ -473,17 +473,17 @@ export default function Customers() {
                         maskChar={null}
                         {...field}
                         value={field.value ?? ""}
+                        // `disabled` fica aqui e não no Input de dentro: o
+                        // react-input-mask lança Invariant Violation se a
+                        // função filha alterar esta prop
+                        disabled={cepLoading}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                           field.onChange(e);
                           applyCep(e.target.value);
                         }}
                       >
                         {(inputProps: any) => (
-                          <Input
-                            {...inputProps}
-                            placeholder="35500-000"
-                            disabled={cepLoading}
-                          />
+                          <Input {...inputProps} placeholder="35500-000" />
                         )}
                       </InputMask>
                     </FormControl>
