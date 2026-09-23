@@ -74,11 +74,14 @@ const loadLogo = async (): Promise<HTMLCanvasElement> => {
   return logoCache;
 };
 
-export const generateServiceOrderPDF = async (
+const pdfFileName = (order: ServiceOrder) => `OS_${order.os_number}.pdf`;
+
+const buildServiceOrderPDF = async (
   order: ServiceOrder,
-  items: ServiceOrderItem[] = []
-) => {
+  items: ServiceOrderItem[]
+): Promise<jsPDF> => {
   const doc = new jsPDF();
+  doc.setProperties({ title: `OS ${order.os_number}` });
   const optionLabels = await loadOptionLabels();
   const labelOf = (value?: string | null) => (value ? optionLabels[value] ?? value : '');
 
@@ -465,7 +468,90 @@ export const generateServiceOrderPDF = async (
     );
   }
 
-  // ===== SALVAR PDF =====
-  doc.save(`OS_${order.os_number}.pdf`);
+  return doc;
+};
+
+export const generateServiceOrderPDF = async (
+  order: ServiceOrder,
+  items: ServiceOrderItem[] = []
+) => {
+  const doc = await buildServiceOrderPDF(order, items);
+  doc.save(pdfFileName(order));
+};
+
+// ===== PRÉ-VISUALIZAÇÃO =====
+// A aba precisa ser aberta no próprio clique: se o window.open vier
+// depois do await da geração, o navegador trata como pop-up e bloqueia.
+// Por isso ela abre vazia com "Gerando..." e recebe o PDF quando pronto.
+// O PDF vai numa página própria, com botão de download, porque o botão
+// do visualizador do navegador salva a partir de uma URL blob e o
+// arquivo sairia com um nome aleatório em vez de OS_<número>.pdf.
+
+const previewStyles = `
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; flex-direction: column; background: #525659;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; background: #2b2622; color: #f5f1ec; }
+  .bar h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  .bar a { padding: 8px 14px; border-radius: 6px; background: #8c7a6b; color: #fff;
+    font-size: 14px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .bar a:hover { background: #6b5b4c; }
+  iframe { flex: 1; width: 100%; border: 0; }
+  .msg { margin: auto; color: #f5f1ec; font-size: 15px; text-align: center; padding: 16px; }
+`;
+
+/** Abre a aba da pré-visualização. Chamar direto no handler do clique. */
+export const openPDFPreviewWindow = (order: ServiceOrder): Window | null => {
+  const win = window.open('', '_blank');
+  if (!win) return null;
+
+  const { document: d } = win;
+  d.title = `OS ${order.os_number}`;
+  const style = d.createElement('style');
+  style.textContent = previewStyles;
+  d.head.appendChild(style);
+  d.body.innerHTML = '<p class="msg">Gerando pré-visualização...</p>';
+
+  return win;
+};
+
+export const previewServiceOrderPDF = async (
+  win: Window,
+  order: ServiceOrder,
+  items: ServiceOrderItem[] = []
+) => {
+  try {
+    const doc = await buildServiceOrderPDF(order, items);
+    if (win.closed) return;
+
+    // A URL é criada pela própria aba, para continuar válida mesmo que a
+    // aba do sistema seja fechada ou mude de página
+    const url = (win as Window & typeof globalThis).URL.createObjectURL(doc.output('blob'));
+    const d = win.document;
+
+    const bar = d.createElement('div');
+    bar.className = 'bar';
+    const title = d.createElement('h1');
+    title.textContent = `Pré-visualização · ${order.os_number}`;
+    const download = d.createElement('a');
+    download.href = url;
+    download.download = pdfFileName(order);
+    download.textContent = 'Baixar PDF';
+    bar.append(title, download);
+
+    const frame = d.createElement('iframe');
+    frame.src = url;
+    frame.title = `OS ${order.os_number}`;
+
+    d.body.replaceChildren(bar, frame);
+  } catch (error) {
+    if (!win.closed) {
+      win.document.body.innerHTML =
+        '<p class="msg">Não foi possível gerar a pré-visualização. Feche esta aba e tente novamente.</p>';
+    }
+    throw error;
+  }
 };
 

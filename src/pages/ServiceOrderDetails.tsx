@@ -31,11 +31,12 @@ import {
   warrantyDaysLeft
 } from "@/lib/formatters";
 import { useOptions } from "@/hooks/useOptions";
-import { generateServiceOrderPDF } from "@/lib/pdfGenerator";
-import { 
-  ArrowLeft, 
-  Edit, 
-  FileText, 
+import { generateServiceOrderPDF, openPDFPreviewWindow, previewServiceOrderPDF } from "@/lib/pdfGenerator";
+import {
+  ArrowLeft,
+  Edit,
+  FileText,
+  FileSearch,
   Calendar, 
   User, 
   MapPin, 
@@ -152,6 +153,31 @@ export default function ServiceOrderDetails() {
       console.error('Erro ao gerar PDF:', error);
       toast({
         title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o PDF. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviewPDF = async () => {
+    if (!serviceOrder) return;
+
+    const previewWindow = openPDFPreviewWindow(serviceOrder);
+    if (!previewWindow) {
+      toast({
+        title: "Pré-visualização bloqueada",
+        description: "O navegador bloqueou a nova aba. Permita pop-ups para este site e tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await previewServiceOrderPDF(previewWindow, serviceOrder, items);
+    } catch (error) {
+      console.error('Erro ao gerar pré-visualização:', error);
+      toast({
+        title: "Erro ao gerar pré-visualização",
         description: "Não foi possível gerar o PDF. Tente novamente.",
         variant: "destructive",
       });
@@ -300,10 +326,14 @@ export default function ServiceOrderDetails() {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={handleEdit} variant="outline" className="gap-2">
               <Edit className="h-4 w-4" />
               Editar
+            </Button>
+            <Button onClick={handlePreviewPDF} variant="outline" className="gap-2">
+              <FileSearch className="h-4 w-4" />
+              Visualizar PDF
             </Button>
             <Button onClick={handleGeneratePDF} variant="outline" className="gap-2">
               <FileText className="h-4 w-4" />

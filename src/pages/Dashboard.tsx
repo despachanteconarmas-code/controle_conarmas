@@ -23,8 +23,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { ServiceOrder, ServiceOrderFilters, ServiceOrderItem, statusConfig } from "@/types/database";
 import { useOptions } from "@/hooks/useOptions";
 import { formatCurrency, formatDate, statusLabels, isInWarranty, cleanCPF, formatCPF } from "@/lib/formatters";
-import { generateServiceOrderPDF } from "@/lib/pdfGenerator";
-import { Search, Plus, Eye, Edit, FileText, Filter, BarChart3, ShieldCheck, Trash2 } from "lucide-react";
+import { generateServiceOrderPDF, openPDFPreviewWindow, previewServiceOrderPDF } from "@/lib/pdfGenerator";
+import { Search, Plus, Eye, Edit, FileText, FileSearch, Filter, BarChart3, ShieldCheck, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useDebounce } from "@/hooks/useDebounce";
 import InputMask from "react-input-mask";
@@ -147,6 +147,36 @@ export default function Dashboard() {
       console.error('Erro ao gerar PDF:', error);
       toast({
         title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o PDF. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviewPDF = async (order: ServiceOrder) => {
+    // Abre a aba antes de qualquer await, senão o navegador bloqueia
+    const previewWindow = openPDFPreviewWindow(order);
+    if (!previewWindow) {
+      toast({
+        title: "Pré-visualização bloqueada",
+        description: "O navegador bloqueou a nova aba. Permita pop-ups para este site e tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: items } = await supabase
+        .from('service_order_items')
+        .select('*')
+        .eq('service_order_id', order.id)
+        .order('position');
+
+      await previewServiceOrderPDF(previewWindow, order, (items ?? []) as unknown as ServiceOrderItem[]);
+    } catch (error) {
+      console.error('Erro ao gerar pré-visualização:', error);
+      toast({
+        title: "Erro ao gerar pré-visualização",
         description: "Não foi possível gerar o PDF. Tente novamente.",
         variant: "destructive",
       });
@@ -493,6 +523,15 @@ export default function Dashboard() {
                                 title="Editar"
                               >
                                 <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handlePreviewPDF(order)}
+                                className="h-8 w-8"
+                                title="Visualizar PDF"
+                              >
+                                <FileSearch className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
