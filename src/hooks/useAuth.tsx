@@ -8,11 +8,24 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Este Supabase também guarda os logins dos filiados (app da carteira).
+// Só a equipe (profiles.role STAFF/ADMIN) entra no sistema de OS.
+// Retorna false apenas quando o banco confirma que a conta não é da
+// equipe. Se a consulta falhar (rede, por exemplo), não derruba ninguém:
+// a RLS do banco continua barrando os dados de qualquer jeito.
+async function isStaffAccount(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_staff');
+  if (error) {
+    console.error('Erro ao verificar acesso da equipe:', error);
+    return true;
+  }
+  return data === true;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -30,8 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Verificar sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Verificar sessão existente (e se ela ainda é de alguém da equipe)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session && !(await isStaffAccount())) {
+        await supabase.auth.signOut();
+        session = null;
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -55,62 +72,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
         }
-        
+
         toast({
           variant: "destructive",
           title: "Erro de Login",
           description: errorMessage,
         });
-      } else {
-        toast({
-          title: "Login realizado",
-          description: "Bem-vindo de volta!",
-        });
+        return { error };
       }
 
-      return { error };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      setLoading(true);
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) {
-        let errorMessage = 'Erro ao criar conta';
-        if (error.message.includes('User already registered')) {
-          errorMessage = 'Este email já está cadastrado';
-        } else if (error.message.includes('Password should be at least')) {
-          errorMessage = 'Senha deve ter pelo menos 6 caracteres';
-        }
-        
+      if (!(await isStaffAccount())) {
+        await supabase.auth.signOut();
         toast({
           variant: "destructive",
-          title: "Erro no Cadastro",
-          description: errorMessage,
+          title: "Acesso restrito",
+          description: "Esta conta não tem acesso ao sistema de OS. Fale com a administração da Conarmas.",
         });
-      } else {
-        toast({
-          title: "Conta criada",
-          description: "Verifique seu email para confirmar a conta.",
-        });
+        return { error: new Error('Conta sem acesso de equipe') };
       }
 
-      return { error };
+      toast({
+        title: "Login realizado",
+        description: "Bem-vindo de volta!",
+      });
+      return { error: null };
     } finally {
       setLoading(false);
     }
@@ -137,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     loading,
     signIn,
-    signUp,
     signOut,
   };
 

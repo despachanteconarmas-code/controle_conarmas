@@ -167,17 +167,6 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
-// Schema para cadastro
-export const signupSchema = z.object({
-  full_name: z.string().min(1, "Nome completo é obrigatório"),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Senhas não coincidem",
-  path: ["confirmPassword"]
-});
-
 // Schema para configurações
 export const settingsSchema = z.object({
   logo_url: z.string().url("URL inválida").optional(),
@@ -187,5 +176,4 @@ export const settingsSchema = z.object({
 export type CreateServiceOrderData = z.infer<typeof createServiceOrderSchema>;
 export type UpdateServiceOrderData = z.infer<typeof updateServiceOrderSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
-export type SignupData = z.infer<typeof signupSchema>;
 export type SettingsData = z.infer<typeof settingsSchema>;

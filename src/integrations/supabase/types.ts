@@ -386,6 +386,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      is_staff: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       process_followups: {
         Args: Record<PropertyKey, never>
         Returns: undefined

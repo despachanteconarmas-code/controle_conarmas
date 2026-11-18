@@ -29,6 +29,20 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Só a equipe da Conarmas mexe em anexos de OS. Filiados também têm
+    // login neste Supabase (app da carteira) e não podem passar daqui.
+    const { data: staffProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (!staffProfile || !['STAFF', 'ADMIN'].includes(staffProfile.role)) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { upload_session_id, service_order_id } = await req.json()
 
     if (!upload_session_id || !service_order_id) {
