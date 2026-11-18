@@ -51,6 +51,49 @@ jobs:
           DB_URL: postgresql://postgres.${{ env.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ env.SUPABASE_DB_HOST }}:5432/postgres
         run: supabase db push --db-url "$DB_URL"
 
+  # Publica as Edge Functions (anexos de OS e login da carteira) depois das
+  # migrations. Precisa do secret SUPABASE_ACCESS_TOKEN (Supabase > Account >
+  # Access Tokens). Sem ele o job só avisa e segue, para não travar o deploy.
+  functions:
+    runs-on: ubuntu-latest
+    needs: migrate
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+
+      - name: Secrets das funções
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          CARTEIRA_N8N_SECRET: ${{ secrets.CARTEIRA_N8N_SECRET }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::warning::SUPABASE_ACCESS_TOKEN não configurado: Edge Functions não publicadas"
+            exit 0
+          fi
+          if [ -z "$CARTEIRA_N8N_SECRET" ]; then
+            echo "::warning::CARTEIRA_N8N_SECRET não configurado: login da carteira não vai enviar códigos"
+            exit 0
+          fi
+          supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" \
+            CARTEIRA_N8N_WEBHOOK_URL=https://webhooks.armascon.com.br/webhook/carteira-codigo-acesso \
+            CARTEIRA_N8N_SECRET="$CARTEIRA_N8N_SECRET"
+
+      - name: Publicar Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            exit 0
+          fi
+          # verify_jwt de cada função vem do supabase/config.toml
+          supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
+
   build-and-push:
     runs-on: ubuntu-latest
     needs: migrate

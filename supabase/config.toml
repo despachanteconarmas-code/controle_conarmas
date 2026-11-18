@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.finalize-upload-session]
 verify_jwt = true
+# Login do filiado (app da carteira): pública, quem chama ainda não tem sessão
+[functions.member-auth]
+verify_jwt = false
