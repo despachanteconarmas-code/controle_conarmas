@@ -14,6 +14,7 @@ const fallbackLabels: Record<OptionCategory, Record<string, string>> = {
   service_item: {},
   caliber: {},
   brand: {},
+  firearm_type: {},
 };
 
 // Marcas de acento que sobram depois do normalize("NFD")

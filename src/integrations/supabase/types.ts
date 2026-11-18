@@ -14,6 +14,225 @@ export type Database = {
   }
   public: {
     Tables: {
+      members: {
+        Row: {
+          id: string
+          member_number: number
+          full_name: string
+          cpf: string
+          phone: string | null
+          email: string | null
+          cr_number: string | null
+          cr_expires_at: string | null
+          membership_expires_at: string
+          photo_path: string | null
+          auth_user_id: string | null
+          verify_token: string
+          legacy_id: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          member_number?: number
+          full_name: string
+          cpf: string
+          phone?: string | null
+          email?: string | null
+          cr_number?: string | null
+          cr_expires_at?: string | null
+          membership_expires_at: string
+          photo_path?: string | null
+          auth_user_id?: string | null
+          verify_token?: string
+          legacy_id?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          member_number?: number
+          full_name?: string
+          cpf?: string
+          phone?: string | null
+          email?: string | null
+          cr_number?: string | null
+          cr_expires_at?: string | null
+          membership_expires_at?: string
+          photo_path?: string | null
+          auth_user_id?: string | null
+          verify_token?: string
+          legacy_id?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      membership_renewals: {
+        Row: {
+          id: string
+          member_id: string
+          paid_at: string
+          years: number
+          previous_expires_at: string
+          new_expires_at: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          member_id: string
+          paid_at: string
+          years: number
+          previous_expires_at: string
+          new_expires_at: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          paid_at?: string
+          years?: number
+          previous_expires_at?: string
+          new_expires_at?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      member_firearms: {
+        Row: {
+          id: string
+          member_id: string
+          type: string | null
+          brand: string | null
+          model: string | null
+          sigma_number: string | null
+          caliber: string | null
+          restriction: string | null
+          sigma_expires_at: string | null
+          position: number
+          created_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          member_id: string
+          type?: string | null
+          brand?: string | null
+          model?: string | null
+          sigma_number?: string | null
+          caliber?: string | null
+          restriction?: string | null
+          sigma_expires_at?: string | null
+          position?: number
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          type?: string | null
+          brand?: string | null
+          model?: string | null
+          sigma_number?: string | null
+          caliber?: string | null
+          restriction?: string | null
+          sigma_expires_at?: string | null
+          position?: number
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      traffic_guides: {
+        Row: {
+          id: string
+          firearm_id: string
+          destination_address: string
+          guide_number: string | null
+          issued_at: string | null
+          expires_at: string
+          created_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          firearm_id: string
+          destination_address: string
+          guide_number?: string | null
+          issued_at?: string | null
+          expires_at?: string
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          firearm_id?: string
+          destination_address?: string
+          guide_number?: string | null
+          issued_at?: string | null
+          expires_at?: string
+          created_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      card_settings: {
+        Row: {
+          id: number
+          club_name: string
+          club_cr: string
+          address: string | null
+          whatsapp: string | null
+          instagram: string | null
+          website: string | null
+          email: string | null
+          legal_text: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: number
+          club_name?: string
+          club_cr?: string
+          address?: string | null
+          whatsapp?: string | null
+          instagram?: string | null
+          website?: string | null
+          email?: string | null
+          legal_text?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: number
+          club_name?: string
+          club_cr?: string
+          address?: string | null
+          whatsapp?: string | null
+          instagram?: string | null
+          website?: string | null
+          email?: string | null
+          legal_text?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       chats: {
         Row: {
           clientName: string | null
@@ -383,9 +602,72 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      member_overview: {
+        Row: {
+          id: string | null
+          member_number: number | null
+          full_name: string | null
+          cpf: string | null
+          phone: string | null
+          email: string | null
+          cr_number: string | null
+          cr_expires_at: string | null
+          membership_expires_at: string | null
+          photo_path: string | null
+          auth_user_id: string | null
+          verify_token: string | null
+          legacy_id: string | null
+          notes: string | null
+          created_at: string | null
+          updated_at: string | null
+          updated_by: string | null
+          membership_status: string | null
+          cr_status: string | null
+          firearm_count: number | null
+        }
+        Relationships: []
+      }
+      member_expirations: {
+        Row: {
+          member_id: string | null
+          member_number: number | null
+          full_name: string | null
+          phone: string | null
+          kind: string | null
+          item_id: string | null
+          description: string | null
+          expires_at: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      current_member_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      expiry_status: {
+        Args: { expires_at: string }
+        Returns: string
+      }
+      regenerate_verify_token: {
+        Args: { p_member_id: string }
+        Returns: string
+      }
+      renew_membership: {
+        Args: { p_member_id: string; p_paid_at: string; p_years?: number }
+        Returns: {
+          id: string
+          member_id: string
+          paid_at: string
+          years: number
+          previous_expires_at: string
+          new_expires_at: string
+          created_by: string | null
+          created_at: string
+        }
+      }
       is_staff: {
         Args: Record<PropertyKey, never>
         Returns: boolean

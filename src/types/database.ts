@@ -47,7 +47,8 @@ export type OptionCategory =
   | 'authority'
   | 'service_item'
   | 'caliber'
-  | 'brand';
+  | 'brand'
+  | 'firearm_type';
 
 export interface OptionList {
   id: string;

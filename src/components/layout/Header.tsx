@@ -15,7 +15,8 @@ import {
   Sun, 
   Monitor,
   Plus,
-  Users
+  Users,
+  IdCard
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -63,6 +64,25 @@ export function Header() {
 
           {/* Ações rápidas */}
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/filiados')}
+              className="hidden sm:flex"
+            >
+              <IdCard className="h-4 w-4 mr-2" />
+              Filiados
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => navigate('/filiados')}
+              className="sm:hidden"
+              size="icon"
+              aria-label="Filiados"
+            >
+              <IdCard className="h-4 w-4" />
+            </Button>
+
             <Button
               variant="outline"
               onClick={() => navigate('/clientes')}
