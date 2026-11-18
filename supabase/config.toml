@@ -20,3 +20,11 @@ verify_jwt = true
 # Login do filiado (app da carteira): pública, quem chama ainda não tem sessão
 [functions.member-auth]
 verify_jwt = false
+
+# Página pública do QR da carteirinha (sem login)
+[functions.member-card]
+verify_jwt = false
+
+# Avisos de vencimento (chamada pelo n8n com x-carteira-secret)
+[functions.member-reminders]
+verify_jwt = false

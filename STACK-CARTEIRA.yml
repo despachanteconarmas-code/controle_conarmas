@@ -1,0 +1,76 @@
+version: "3.7"
+
+#########################################################
+# STACK DA CARTEIRA DIGITAL DO FILIADO
+# Domínio: carteira.armascon.com.br
+#
+# Imagem publicada pelo GitHub Actions a cada push na main
+# (job "build-carteira" em .github/workflows/docker-publish.yml).
+#
+# Primeiro deploy (na VPS):
+#   docker stack deploy -c STACK-CARTEIRA.yml carteira --with-registry-auth
+#
+# Versão nova:
+#   docker service update \
+#     --image ghcr.io/despachanteconarmas-code/controle_conarmas-carteira:latest \
+#     --with-registry-auth --force carteira_carteira
+#
+# Antes do primeiro deploy, o DNS (Cloudflare) precisa ter
+# carteira.armascon.com.br apontando para esta VPS, senão o
+# Let's Encrypt não emite o certificado.
+#########################################################
+
+services:
+  carteira:
+    image: ghcr.io/despachanteconarmas-code/controle_conarmas-carteira:latest
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}"
+    networks:
+      - network_swarm_public
+    environment:
+      - TZ=America/Sao_Paulo
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.carteira.rule=Host(`carteira.armascon.com.br`)
+        - traefik.http.routers.carteira.entrypoints=websecure
+        - traefik.http.routers.carteira.tls.certresolver=letsencryptresolver
+        - traefik.http.routers.carteira.service=carteira
+        - traefik.http.services.carteira.loadbalancer.server.port=80
+        - traefik.http.services.carteira.loadbalancer.passHostHeader=true
+        - traefik.http.services.carteira.loadbalancer.healthcheck.path=/
+        - traefik.http.services.carteira.loadbalancer.healthcheck.interval=30s
+        - traefik.http.services.carteira.loadbalancer.healthcheck.timeout=3s
+        # Mesmos cabeçalhos de segurança do app de OS
+        - traefik.http.middlewares.carteira-security.headers.sslRedirect=true
+        - traefik.http.middlewares.carteira-security.headers.frameDeny=true
+        - traefik.http.middlewares.carteira-security.headers.contentTypeNosniff=true
+        - traefik.http.middlewares.carteira-security.headers.stsSeconds=31536000
+        - traefik.http.middlewares.carteira-security.headers.stsIncludeSubdomains=true
+        - traefik.http.routers.carteira.middlewares=carteira-security
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+networks:
+  network_swarm_public:
+    name: network_swarm_public
+    external: true

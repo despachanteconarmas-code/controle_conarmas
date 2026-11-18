@@ -24,6 +24,9 @@ export const GUIDE_VALIDITY_MONTHS = 6;
 /** Endereço do app do filiado (Fase 4) */
 export const MEMBER_APP_URL = "https://carteira.armascon.com.br";
 
+/** Endereço que o QR do verso abre (página pública de conferência) */
+export const verifyUrl = (token: string) => `${MEMBER_APP_URL}/v/${token}`;
+
 // ---------------------------------------------------------------------
 // Datas. O banco guarda DATE ("2027-03-30"); aqui elas são tratadas como
 // data local, sem fuso, para "30/03" não virar "29/03" no Brasil.

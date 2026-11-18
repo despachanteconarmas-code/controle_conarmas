@@ -1,0 +1,36 @@
+# App do filiado (carteira.armascon.com.br)
+# Mesmo repositório do app de OS; muda só o comando de build e o nginx.
+
+# Estágio 1: Build
+FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+# O Vite embute as VITE_* no bundle em tempo de build
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV NODE_ENV=production
+
+RUN npm run build:carteira
+
+# Estágio 2: Nginx
+FROM nginx:alpine
+COPY nginx-carteira.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist-carteira /usr/share/nginx/html
+COPY docker-entrypoint.sh /app-entrypoint.sh
+RUN chmod +x /app-entrypoint.sh
+EXPOSE 80
+
+# 127.0.0.1 e não localhost: o nginx escuta só em IPv4 (ver Dockerfile)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://127.0.0.1/ || exit 1
+
+ENTRYPOINT ["/app-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

@@ -9,6 +9,7 @@ import { RenewDialog } from "@/components/members/RenewDialog";
 import { FirearmDialog } from "@/components/members/FirearmDialog";
 import { GuideDialog } from "@/components/members/GuideDialog";
 import { MemberPhoto } from "@/components/members/MemberPhoto";
+import { CardPdfButton } from "@/components/members/CardPdfButton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ import {
   MemberFirearm,
   MembershipRenewal,
   MEMBER_APP_URL,
+  verifyUrl,
   restrictionLabels,
   Restriction,
   TrafficGuide,
@@ -45,7 +47,6 @@ import {
   Trash2,
   MessageCircle,
   QrCode,
-  FileDown,
   Crosshair,
   MapPin,
   UserCheck,
@@ -215,7 +216,7 @@ export default function MemberDetails() {
   const firearmLabel = (f: MemberFirearm) =>
     [firearmType.getLabel(f.type), brand.getLabel(f.brand), f.model].filter(Boolean).join(" ") || "Arma";
 
-  const verifyUrl = `${MEMBER_APP_URL}/v/${member.verify_token}`;
+  const qrUrl = verifyUrl(member.verify_token);
   const firstName = member.full_name.split(" ")[0];
   const inviteText =
     `Olá, ${firstName}! Sua carteira digital de filiado do Clube de Tiro Conarmas já está disponível. ` +
@@ -431,15 +432,12 @@ export default function MemberDetails() {
                 <CardDescription>QR do verso e PDF para impressão</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="break-all rounded-md bg-muted/50 p-2 font-mono text-xs text-muted-foreground">{verifyUrl}</p>
+                <p className="break-all rounded-md bg-muted/50 p-2 font-mono text-xs text-muted-foreground">{qrUrl}</p>
                 <Button variant="outline" className="w-full" onClick={() => setConfirm({ kind: "qr" })}>
                   <QrCode className="mr-2 h-4 w-4" />
                   Gerar novo QR
                 </Button>
-                <Button variant="outline" className="w-full" disabled title="Disponível na Fase 5">
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Baixar PDF (em breve)
-                </Button>
+                <CardPdfButton member={member} />
               </CardContent>
             </Card>
 

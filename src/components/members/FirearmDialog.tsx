@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ManagedSelect } from "@/components/ManagedSelect";
+import { OptionSelect, SimpleOption } from "@/components/members/OptionSelect";
 import { useToast } from "@/hooks/use-toast";
 import { MemberFirearm, Restriction } from "@/lib/members";
 
@@ -24,6 +25,12 @@ interface FirearmDialogProps {
   firearm?: MemberFirearm | null;
   /** Posição da arma nova na lista (PS 1, PS 2...) */
   nextPosition: number;
+  /**
+   * Listas só de leitura (app do filiado). Sem elas, usa o ManagedSelect do
+   * painel, que permite incluir e remover opções.
+   */
+  readOnlyOptions?: { firearm_type: SimpleOption[]; brand: SimpleOption[]; caliber: SimpleOption[] };
+  onSaved?: () => void;
 }
 
 const empty = {
@@ -36,7 +43,7 @@ const empty = {
   sigma_expires_at: "",
 };
 
-export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosition }: FirearmDialogProps) {
+export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosition, readOnlyOptions, onSaved }: FirearmDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(empty);
@@ -86,6 +93,7 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
       queryClient.invalidateQueries({ queryKey: ["member-expirations"] });
       toast({ title: firearm ? "Arma atualizada" : "Arma cadastrada" });
       onOpenChange(false);
+      onSaved?.();
     },
     onError: () => {
       toast({ title: "Erro", description: "Não foi possível salvar a arma.", variant: "destructive" });
@@ -106,11 +114,19 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Tipo *</Label>
-              <ManagedSelect category="firearm_type" value={form.type} onChange={set("type")} />
+              {readOnlyOptions ? (
+                <OptionSelect options={readOnlyOptions.firearm_type} value={form.type} onChange={set("type")} />
+              ) : (
+                <ManagedSelect category="firearm_type" value={form.type} onChange={set("type")} />
+              )}
             </div>
             <div className="space-y-2">
               <Label>Marca</Label>
-              <ManagedSelect category="brand" value={form.brand} onChange={set("brand")} />
+              {readOnlyOptions ? (
+                <OptionSelect options={readOnlyOptions.brand} value={form.brand} onChange={set("brand")} />
+              ) : (
+                <ManagedSelect category="brand" value={form.brand} onChange={set("brand")} />
+              )}
             </div>
           </div>
 
@@ -122,7 +138,11 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Calibre</Label>
-              <ManagedSelect category="caliber" value={form.caliber} onChange={set("caliber")} />
+              {readOnlyOptions ? (
+                <OptionSelect options={readOnlyOptions.caliber} value={form.caliber} onChange={set("caliber")} />
+              ) : (
+                <ManagedSelect category="caliber" value={form.caliber} onChange={set("caliber")} />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="fa-sigma">Nº SIGMA</Label>

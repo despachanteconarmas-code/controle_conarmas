@@ -23,9 +23,10 @@ interface GuideDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guide?: TrafficGuide | null;
+  onSaved?: () => void;
 }
 
-export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenChange, guide }: GuideDialogProps) {
+export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenChange, guide, onSaved }: GuideDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [address, setAddress] = useState("");
@@ -70,6 +71,7 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
       queryClient.invalidateQueries({ queryKey: ["member-expirations"] });
       toast({ title: guide ? "GT atualizada" : "GT cadastrada" });
       onOpenChange(false);
+      onSaved?.();
     },
     onError: () => {
       toast({ title: "Erro", description: "Não foi possível salvar a GT.", variant: "destructive" });
