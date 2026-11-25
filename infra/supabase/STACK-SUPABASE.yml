@@ -245,7 +245,9 @@ services:
       retries: 3
     environment:
       JWT_SECRET: ${JWT_SECRET}
-      SUPABASE_URL: http://api-gw:8000
+      # Endereço público, como no gerenciado: links assinados (anexos, fotos)
+      # saem com o domínio que o navegador alcança, e não com o interno
+      SUPABASE_URL: ${SUPABASE_PUBLIC_URL}
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}

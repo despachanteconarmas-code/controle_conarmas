@@ -52,6 +52,9 @@ echo ">> Importando estrutura e dados (transação única)"
 docker exec "$D" psql -U supabase_admin -d postgres -qAt -f /tmp/importar/importar.sql \
   | grep -vE '^(SET|COPY [0-9]+|ALTER [A-Z ]+|CREATE [A-Z ]+|COMMENT|GRANT|REVOKE|DO|INSERT 0 [0-9]+|BEGIN|COMMIT|[0-9]+)$|set_config|^\s*$' || true
 docker exec -u 0 "$D" rm -rf /tmp/importar
+# A API (PostgREST) guarda a estrutura em cache. O aviso por NOTIFY nem
+# sempre chega (a conexão de escuta pode ter caído), então reinicia a API.
+docker service update --quiet --force supabase_rest >/dev/null
 
 echo ">> Enviando os arquivos do Storage"
 cp /opt/stacks/conarmas-repo/infra/supabase/importar-storage.mjs "$DADOS/../importar-storage.mjs"

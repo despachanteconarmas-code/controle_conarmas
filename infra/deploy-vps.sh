@@ -46,6 +46,8 @@ for f in $(ls "$REPO"/supabase/migrations/*.sql | sort); do
   APLICADAS=$((APLICADAS + 1))
 done
 echo "   $APLICADAS nova(s)"
+# Estrutura mudou: reinicia a API para recarregar o cache (NOTIFY nem sempre chega)
+[ "$APLICADAS" = "0" ] || docker service update --quiet --force supabase_rest >/dev/null
 
 echo ">> Edge Functions"
 for dir in "$REPO"/supabase/functions/*/; do
