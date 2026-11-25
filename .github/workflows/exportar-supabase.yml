@@ -38,10 +38,20 @@ jobs:
         env:
           UPLOAD_URL: ${{ inputs.upload_url }}
         run: |
-          case "$UPLOAD_URL" in
-            https://supabase.armascon.com.br/storage/v1/object/upload/sign/migracao/pacote-*\?token=*) echo "Link válido" ;;
-            *) echo "::error::O link não é um link de upload do bucket migracao do supabase.armascon.com.br"; exit 1 ;;
-          esac
+          set -euo pipefail
+          # Link copiado do chat pode vir com espaço ou quebra de linha no meio
+          LIMPO=$(printf '%s' "$UPLOAD_URL" | tr -d '[:space:]')
+          if [ "$LIMPO" != "$UPLOAD_URL" ]; then
+            echo "Removidos $(( ${#UPLOAD_URL} - ${#LIMPO} )) espaço(s)/quebra(s) de linha do link"
+          fi
+          TOKEN=${LIMPO#*token=}
+          echo "::add-mask::$TOKEN"
+          if ! printf '%s' "$LIMPO" | grep -Eq '^https://supabase\.armascon\.com\.br/storage/v1/object/upload/sign/migracao/pacote-[0-9]{8}-[0-9]{6}\.tar\?token=[A-Za-z0-9._-]+$'; then
+            echo "::error::Link inválido (${#LIMPO} caracteres). Gere outro na VPS com gerar-link.sh e cole inteiro, sem cortes."
+            exit 1
+          fi
+          echo "Link válido (${#LIMPO} caracteres)"
+          echo "UPLOAD_URL_LIMPO=$LIMPO" >> "$GITHUB_ENV"
 
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -98,12 +108,19 @@ jobs:
           ls -l pacote.tar | awk '{print "pacote:", $5, "bytes"}'
 
       - name: Enviar para a VPS
-        env:
-          UPLOAD_URL: ${{ inputs.upload_url }}
         run: |
-          set -euo pipefail
-          curl -sS --fail --retry 2 -X PUT -H "Content-Type: application/x-tar" \
-            --data-binary @"$RUNNER_TEMP/pacote.tar" "$UPLOAD_URL" -o /dev/null -w "upload: HTTP %{http_code}\n"
-          rm -f "$RUNNER_TEMP"/pacote.tar "$RUNNER_TEMP"/dados.enc "$RUNNER_TEMP"/chave.enc
+          set -uo pipefail
+          # HTTP/1.1 explícito (o mesmo caminho testado na VPS) e o motivo no
+          # log se falhar: a resposta do servidor não tem dados nem o token
+          CODE=$(curl -sS --http1.1 --retry 2 --retry-all-errors -X PUT -H "Content-Type: application/x-tar" \
+            --data-binary @"$RUNNER_TEMP/pacote.tar" "$UPLOAD_URL_LIMPO" \
+            -o "$RUNNER_TEMP/resposta.txt" -w "%{http_code}")
+          echo "upload: HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "Resposta do servidor:"; head -c 500 "$RUNNER_TEMP/resposta.txt"; echo
+            echo "::error::Envio recusado (HTTP $CODE)"
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP"/pacote.tar "$RUNNER_TEMP"/dados.enc "$RUNNER_TEMP"/chave.enc "$RUNNER_TEMP"/resposta.txt
           echo "### Pacote enviado" >> "$GITHUB_STEP_SUMMARY"
           echo "Na VPS: \`/opt/stacks/supabase/migracao/abrir-pacote.sh\`" >> "$GITHUB_STEP_SUMMARY"
