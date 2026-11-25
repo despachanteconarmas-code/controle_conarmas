@@ -46,7 +46,10 @@ jobs:
           fi
           TOKEN=${LIMPO#*token=}
           echo "::add-mask::$TOKEN"
-          if ! printf '%s' "$LIMPO" | grep -Eq '^https://supabase\.armascon\.com\.br/storage/v1/object/upload/sign/migracao/pacote-[0-9]{8}-[0-9]{6}\.tar\?token=[A-Za-z0-9._-]+$'; then
+          # Regex do próprio bash: com pipefail, "printf | grep -q" dava falso negativo
+          # (o grep fecha a leitura ao achar o padrão e o printf leva SIGPIPE)
+          PADRAO='^https://supabase\.armascon\.com\.br/storage/v1/object/upload/sign/migracao/pacote-[0-9]{8}-[0-9]{6}\.tar\?token=[A-Za-z0-9._-]+$'
+          if ! [[ "$LIMPO" =~ $PADRAO ]]; then
             echo "::error::Link inválido (${#LIMPO} caracteres). Gere outro na VPS com gerar-link.sh e cole inteiro, sem cortes."
             exit 1
           fi
