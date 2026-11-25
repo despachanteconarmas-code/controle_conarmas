@@ -23,6 +23,7 @@ import InputMask from "react-input-mask";
 import { FileUpload } from "@/components/FileUpload";
 import { ServiceOrderItems, ItemDraft, calculateItemsTotal } from "@/components/ServiceOrderItems";
 import { ManagedSelect } from "@/components/ManagedSelect";
+import { functionUrl } from "@/lib/supabaseUrl";
 
 export default function EditServiceOrder() {
   const { id } = useParams<{ id: string }>();
@@ -67,7 +68,7 @@ export default function EditServiceOrder() {
 
       try {
         const response = await fetch(
-          `https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/get-os-files/${id}`,
+          functionUrl(`get-os-files/${id}`),
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,

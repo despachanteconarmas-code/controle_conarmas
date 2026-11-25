@@ -30,6 +30,7 @@ import { ServiceOrderFile, Customer } from "@/types/database";
 import { CustomerPicker } from "@/components/CustomerPicker";
 import { ManagedSelect } from "@/components/ManagedSelect";
 import { ServiceOrderItems, ItemDraft, calculateItemsTotal } from "@/components/ServiceOrderItems";
+import { functionUrl } from "@/lib/supabaseUrl";
 
 export default function NewServiceOrder() {
   const { user, loading: authLoading } = useAuth();
@@ -195,7 +196,7 @@ export default function NewServiceOrder() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           await fetch(
-            'https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/finalize-upload-session',
+            functionUrl('finalize-upload-session'),
             {
               method: 'POST',
               headers: {
@@ -249,7 +250,7 @@ export default function NewServiceOrder() {
           if (!session) return;
 
           const response = await fetch(
-            'https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/create-upload-session',
+            functionUrl('create-upload-session'),
             {
               method: 'POST',
               headers: {

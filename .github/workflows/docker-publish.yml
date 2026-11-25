@@ -1,14 +1,17 @@
 name: Build e publica imagem no GHCR
 
-# Toda alteração na main aplica as migrations pendentes e gera uma
-# imagem nova. O deploy na VPS continua manual (ver STACK-GHCR.yml).
+# Toda alteração na main gera as imagens do app de OS e da carteira.
+#
+# Migrations, Edge Functions e a publicação das imagens rodam NA VPS, pelo
+# infra/deploy-vps.sh: o Supabase agora é self-hosted e o banco não fica
+# exposto na internet (o CI não alcança o banco).
 on:
   push:
     branches: [main]
     tags: ["v*"]
   workflow_dispatch:
 
-# Evita que dois pushes simultâneos rodem migration ao mesmo tempo
+# Um build por vez
 concurrency:
   group: deploy-conarmas
   cancel-in-progress: false
@@ -16,87 +19,10 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  SUPABASE_PROJECT_REF: utwujmzfwpyixczstdjw
-  # O runner do GitHub é só IPv4 e o host direto (db.*.supabase.co)
-  # resolve apenas em IPv6, por isso a conexão vai pelo pooler.
-  SUPABASE_DB_HOST: aws-1-sa-east-1.pooler.supabase.com
 
 jobs:
-  # Roda antes do build: se a migration falhar, nenhuma imagem nova é
-  # publicada, e a stack em produção continua batendo com o banco.
-  migrate:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          # Versão fixa de propósito: com `latest` a action consulta a API
-          # do GitHub a cada execução e o job quebra quando bate no rate
-          # limit. Fixar também deixa o resultado reproduzível.
-          version: 2.114.0
-
-      - name: Migrations pendentes (dry-run)
-        env:
-          # Se a senha for trocada por uma com caracteres especiais,
-          # ela precisa entrar aqui codificada para URL
-          DB_URL: postgresql://postgres.${{ env.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ env.SUPABASE_DB_HOST }}:5432/postgres
-        run: supabase db push --dry-run --db-url "$DB_URL"
-
-      - name: Aplicar migrations
-        env:
-          DB_URL: postgresql://postgres.${{ env.SUPABASE_PROJECT_REF }}:${{ secrets.SUPABASE_DB_PASSWORD }}@${{ env.SUPABASE_DB_HOST }}:5432/postgres
-        run: supabase db push --db-url "$DB_URL"
-
-  # Publica as Edge Functions (anexos de OS e login da carteira) depois das
-  # migrations. Precisa do secret SUPABASE_ACCESS_TOKEN (Supabase > Account >
-  # Access Tokens). Sem ele o job só avisa e segue, para não travar o deploy.
-  functions:
-    runs-on: ubuntu-latest
-    needs: migrate
-
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: 2.114.0
-
-      - name: Secrets das funções
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          CARTEIRA_N8N_SECRET: ${{ secrets.CARTEIRA_N8N_SECRET }}
-        run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "::warning::SUPABASE_ACCESS_TOKEN não configurado: Edge Functions não publicadas"
-            exit 0
-          fi
-          if [ -z "$CARTEIRA_N8N_SECRET" ]; then
-            echo "::warning::CARTEIRA_N8N_SECRET não configurado: login da carteira não vai enviar códigos"
-            exit 0
-          fi
-          supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" \
-            CARTEIRA_N8N_WEBHOOK_URL=https://webhooks.armascon.com.br/webhook/carteira-codigo-acesso \
-            CARTEIRA_N8N_SECRET="$CARTEIRA_N8N_SECRET"
-
-      - name: Publicar Edge Functions
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            exit 0
-          fi
-          # verify_jwt de cada função vem do supabase/config.toml
-          supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --use-api
-
   build-and-push:
     runs-on: ubuntu-latest
-    needs: migrate
 
     permissions:
       contents: read
@@ -157,7 +83,6 @@ jobs:
   # App do filiado (carteira.armascon.com.br): mesma base, outra imagem
   build-carteira:
     runs-on: ubuntu-latest
-    needs: migrate
 
     permissions:
       contents: read

@@ -32,6 +32,7 @@ import {
 } from "@/lib/formatters";
 import { useOptions } from "@/hooks/useOptions";
 import { generateServiceOrderPDF, openPDFPreviewWindow, previewServiceOrderPDF } from "@/lib/pdfGenerator";
+import { functionUrl } from "@/lib/supabaseUrl";
 import {
   ArrowLeft,
   Edit,
@@ -115,7 +116,7 @@ export default function ServiceOrderDetails() {
 
       try {
         const response = await fetch(
-          `https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/get-os-files/${id}`,
+          functionUrl(`get-os-files/${id}`),
           {
             headers: {
               Authorization: `Bearer ${session.access_token}`,

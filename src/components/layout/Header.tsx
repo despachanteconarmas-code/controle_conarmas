@@ -20,8 +20,9 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
-// Logo da empresa (hardcoded)
-const LOGO_URL = "https://utwujmzfwpyixczstdjw.supabase.co/storage/v1/object/sign/logo/CAPA%20REDES%20SOCIAIS.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NmRkNTQxYi00NDkyLTRjYTUtOTg2ZC01ZDc3NjI5ODU5MTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dvL0NBUEEgUkVERVMgU09DSUFJUy5wbmciLCJpYXQiOjE3NTkzNDkwNDcsImV4cCI6MTkxNzAyOTA0N30.HuUX3EU4YERLcy-vzGdmkckhMY6gXJU17v0UC3ffz0Y";
+// Logo da empresa. Antes vinha de um link assinado do Supabase gerenciado
+// (8,9 MB a cada página); agora é um arquivo do próprio app, reduzido.
+const LOGO_URL = "/logo-cabecalho.png";
 
 export function Header() {
   const { user, signOut } = useAuth();

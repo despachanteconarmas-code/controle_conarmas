@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload, X, File, Download, Trash2, Image, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { functionUrl } from "@/lib/supabaseUrl";
 
 interface StagingFile {
   id: string;
@@ -113,7 +114,7 @@ export function FileUpload({
       if (mode === 'staging' && uploadSessionId) {
         // Upload para staging
         response = await fetch(
-          `https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/upload-to-staging/${uploadSessionId}`,
+          functionUrl(`upload-to-staging/${uploadSessionId}`),
           {
             method: 'POST',
             headers: {
@@ -125,7 +126,7 @@ export function FileUpload({
       } else if (mode === 'persistent' && serviceOrderId) {
         // Upload direto para OS
         response = await fetch(
-          `https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/upload-os-file/${serviceOrderId}`,
+          functionUrl(`upload-os-file/${serviceOrderId}`),
           {
             method: 'POST',
             headers: {
@@ -189,7 +190,7 @@ export function FileUpload({
       if (!session) return;
 
       const response = await fetch(
-        `https://utwujmzfwpyixczstdjw.supabase.co/functions/v1/get-os-files/${serviceOrderId}`,
+        functionUrl(`get-os-files/${serviceOrderId}`),
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,

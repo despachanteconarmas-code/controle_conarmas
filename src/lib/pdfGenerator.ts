@@ -27,7 +27,8 @@ const loadOptionLabels = async (): Promise<Record<string, string>> => {
 };
 
 // URL da logo da empresa
-const LOGO_URL = 'https://utwujmzfwpyixczstdjw.supabase.co/storage/v1/object/sign/logo/CAPA%20REDES%20SOCIAIS.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV81NmRkNTQxYi00NDkyLTRjYTUtOTg2ZC01ZDc3NjI5ODU5MTciLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJsb2dvL0NBUEEgUkVERVMgU09DSUFJUy5wbmciLCJpYXQiOjE3NTkzNDkwNDcsImV4cCI6MTkxNzAyOTA0N30.HuUX3EU4YERLcy-vzGdmkckhMY6gXJU17v0UC3ffz0Y';
+// Logo do PDF: arquivo do próprio app (antes, link assinado do Supabase gerenciado)
+const LOGO_URL = '/logo-pdf.png';
 
 // Função auxiliar para carregar imagem
 const loadImage = (url: string): Promise<HTMLImageElement> => {
