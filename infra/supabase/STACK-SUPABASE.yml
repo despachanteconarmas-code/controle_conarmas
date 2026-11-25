@@ -180,6 +180,8 @@ services:
       STORAGE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       REQUEST_ALLOW_X_FORWARDED_PATH: "true"
       FILE_SIZE_LIMIT: 2147483648
+      # Link de upload assinado (pacote da migração): 2 horas
+      UPLOAD_SIGNED_URL_EXPIRATION_TIME: 7200
       STORAGE_BACKEND: file
       GLOBAL_S3_BUCKET: ${GLOBAL_S3_BUCKET}
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
