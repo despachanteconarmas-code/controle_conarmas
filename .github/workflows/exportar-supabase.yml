@@ -39,8 +39,23 @@ jobs:
           UPLOAD_URL: ${{ inputs.upload_url }}
         run: |
           set -euo pipefail
-          # Link copiado do chat pode vir com espaço ou quebra de linha no meio
-          LIMPO=$(printf '%s' "$UPLOAD_URL" | tr -d '[:space:]')
+          # Link copiado do chat pode vir com espaço, quebra de linha ou com o
+          # hífen trocado por um "hífen tipográfico" (‐ ‑ ‒ – — −), que o
+          # servidor rejeita. Normaliza e mostra o que ainda sobrar de estranho.
+          LIMPO=$(printf '%s' "$UPLOAD_URL" | python3 -c '
+          import sys
+          s = sys.stdin.read()
+          for c in "‐‑‒–—―−﹣－":
+              s = s.replace(c, "-")
+          s = "".join(ch for ch in s if not ch.isspace() and ch not in "­​‌‍﻿")
+          estranhos = sorted({f"U+{ord(ch):04X}" for ch in s if ord(ch) > 127})
+          if estranhos:
+              print("Caracteres fora do padrão no link: " + ", ".join(estranhos), file=sys.stderr)
+          print(s, end="")
+          ')
+          if [ "$LIMPO" != "$UPLOAD_URL" ]; then
+            echo "Link normalizado (hífens tipográficos, espaços ou quebras de linha corrigidos)"
+          fi
           if [ "$LIMPO" != "$UPLOAD_URL" ]; then
             echo "Removidos $(( ${#UPLOAD_URL} - ${#LIMPO} )) espaço(s)/quebra(s) de linha do link"
           fi
