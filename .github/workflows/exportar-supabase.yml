@@ -3,19 +3,14 @@ name: Exportar Supabase gerenciado (migração)
 # Roda SÓ manualmente (Actions > este workflow > Run workflow).
 # Exporta banco (estrutura, dados e usuários) e arquivos do Supabase
 # gerenciado, criptografa com a chave pública da VPS e envia o pacote para o
-# Supabase self-hosted por um link de upload de uso único.
-#
-# O link é gerado na VPS com:  /opt/stacks/supabase/migracao/gerar-link.sh
-# e vale 2 horas. Só a VPS tem a chave privada para abrir o pacote.
+# Supabase self-hosted por um link de upload de uso único, que o próprio
+# workflow pede à VPS (função temporária migracao-link, autenticada com o
+# secret CARTEIRA_N8N_SECRET). Ninguém precisa copiar e colar link.
+# Só a VPS tem a chave privada para abrir o pacote.
 #
 # Os logs mostram só totais: nenhum dado, nome de arquivo ou chave.
 on:
   workflow_dispatch:
-    inputs:
-      upload_url:
-        description: "Link de upload gerado na VPS (gerar-link.sh)"
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -34,42 +29,28 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - name: Conferir o link
+      - name: Pedir o link de upload à VPS
         env:
-          UPLOAD_URL: ${{ inputs.upload_url }}
+          CARTEIRA_N8N_SECRET: ${{ secrets.CARTEIRA_N8N_SECRET }}
         run: |
           set -euo pipefail
-          # Link copiado do chat pode vir com espaço, quebra de linha ou com o
-          # hífen trocado por um "hífen tipográfico" (‐ ‑ ‒ – — −), que o
-          # servidor rejeita. Normaliza e mostra o que ainda sobrar de estranho.
-          LIMPO=$(printf '%s' "$UPLOAD_URL" | python3 -c '
-          import sys
-          s = sys.stdin.read()
-          for c in "‐‑‒–—―−﹣－":
-              s = s.replace(c, "-")
-          s = "".join(ch for ch in s if not ch.isspace() and ch not in "­​‌‍﻿")
-          estranhos = sorted({f"U+{ord(ch):04X}" for ch in s if ord(ch) > 127})
-          if estranhos:
-              print("Caracteres fora do padrão no link: " + ", ".join(estranhos), file=sys.stderr)
-          print(s, end="")
-          ')
-          if [ "$LIMPO" != "$UPLOAD_URL" ]; then
-            echo "Link normalizado (hífens tipográficos, espaços ou quebras de linha corrigidos)"
-          fi
-          if [ "$LIMPO" != "$UPLOAD_URL" ]; then
-            echo "Removidos $(( ${#UPLOAD_URL} - ${#LIMPO} )) espaço(s)/quebra(s) de linha do link"
-          fi
-          TOKEN=${LIMPO#*token=}
-          echo "::add-mask::$TOKEN"
-          # Regex do próprio bash: com pipefail, "printf | grep -q" dava falso negativo
-          # (o grep fecha a leitura ao achar o padrão e o printf leva SIGPIPE)
-          PADRAO='^https://supabase\.armascon\.com\.br/storage/v1/object/upload/sign/migracao/pacote-[0-9]{8}-[0-9]{6}\.tar\?token=[A-Za-z0-9._-]+$'
-          if ! [[ "$LIMPO" =~ $PADRAO ]]; then
-            echo "::error::Link inválido (${#LIMPO} caracteres). Gere outro na VPS com gerar-link.sh e cole inteiro, sem cortes."
+          if [ -z "$CARTEIRA_N8N_SECRET" ]; then
+            echo "::error::Falta o secret CARTEIRA_N8N_SECRET no GitHub"
             exit 1
           fi
-          echo "Link válido (${#LIMPO} caracteres)"
-          echo "UPLOAD_URL_LIMPO=$LIMPO" >> "$GITHUB_ENV"
+          CODE=$(curl -sS -o "$RUNNER_TEMP/link.json" -w "%{http_code}" -X POST \
+            -H "x-carteira-secret: $CARTEIRA_N8N_SECRET" \
+            https://supabase.armascon.com.br/functions/v1/migracao-link)
+          if [ "$CODE" != "200" ]; then
+            echo "::error::A VPS recusou o pedido do link (HTTP $CODE). Confira o secret CARTEIRA_N8N_SECRET."
+            exit 1
+          fi
+          URL=$(jq -r .url "$RUNNER_TEMP/link.json")
+          rm -f "$RUNNER_TEMP/link.json"
+          echo "::add-mask::${URL#*token=}"
+          ARQ=${URL%%\?*}; ARQ=${ARQ##*/}
+          echo "Link recebido para $ARQ"
+          echo "UPLOAD_URL_LIMPO=$URL" >> "$GITHUB_ENV"
 
       - name: Checkout do código
         uses: actions/checkout@v4
