@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,16 @@ import FirearmsPage from "./pages/FirearmsPage";
 import MembershipPage from "./pages/MembershipPage";
 import ProfilePage from "./pages/ProfilePage";
 import VerifyPage from "./pages/VerifyPage";
+import EntrarPainel from "./pages/EntrarPainel";
+// Painel de filiação da equipe: as mesmas telas do sistema de OS
+import { AuthProvider as StaffAuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
+import StaffLogin from "@/pages/Auth";
+import Members from "@/pages/Members";
+import MemberDetails from "@/pages/MemberDetails";
+import MemberExpirations from "@/pages/MemberExpirations";
+import MemberImport from "@/pages/MemberImport";
+import CardSettingsPage from "@/pages/CardSettingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: true, staleTime: 60_000 } },
@@ -73,6 +83,17 @@ function MemberArea() {
   );
 }
 
+/** Login e telas da equipe (e-mail e senha), separados do login do filiado */
+function StaffArea() {
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="carteira-painel-tema">
+      <StaffAuthProvider>
+        <Outlet />
+      </StaffAuthProvider>
+    </ThemeProvider>
+  );
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -82,6 +103,15 @@ export default function App() {
           <AuthProvider>
             <Routes>
               <Route path="/v/:token" element={<VerifyPage />} />
+              <Route element={<StaffArea />}>
+                <Route path="/auth" element={<StaffLogin />} />
+                <Route path="/entrar-painel" element={<EntrarPainel />} />
+                <Route path="/filiados" element={<Members />} />
+                <Route path="/filiados/vencimentos" element={<MemberExpirations />} />
+                <Route path="/filiados/importar" element={<MemberImport />} />
+                <Route path="/filiados/configuracoes" element={<CardSettingsPage />} />
+                <Route path="/filiados/:id" element={<MemberDetails />} />
+              </Route>
               <Route path="*" element={<MemberArea />} />
             </Routes>
           </AuthProvider>

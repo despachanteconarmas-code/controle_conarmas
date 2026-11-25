@@ -12,6 +12,8 @@ export default defineConfig({
   envDir: __dirname,
   server: { host: "::", port: 5173 },
   plugins: [react()],
+  // Telas do painel de filiação (src/) sabem que estão dentro da carteira
+  define: { "import.meta.env.VITE_APP_VARIANT": JSON.stringify("carteira") },
   css: { postcss: __dirname },
   resolve: {
     alias: {

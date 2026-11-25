@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { loginSchema, type LoginData } from "@/lib/validations";
 import { LogIn } from "lucide-react";
+import { IS_CARTEIRA, STAFF_HOME } from "@/lib/appVariant";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function Auth() {
   // Redirecionar se já estiver logado
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate(STAFF_HOME);
     }
   }, [user, navigate]);
 
@@ -36,7 +37,7 @@ export default function Auth() {
     try {
       const { error } = await signIn(data.email, data.password);
       if (!error) {
-        navigate('/');
+        navigate(STAFF_HOME);
       }
     } finally {
       setIsLoading(false);
@@ -56,10 +57,10 @@ export default function Auth() {
             />
           </div>
           <h1 className="text-2xl font-bold text-foreground">
-            Conarmas Controle de OS
+            {IS_CARTEIRA ? "Conarmas · Filiação" : "Conarmas Controle de OS"}
           </h1>
           <p className="text-muted-foreground">
-            Sistema de Gestão de Ordem de Serviço
+            {IS_CARTEIRA ? "Painel de administração dos filiados" : "Sistema de Gestão de Ordem de Serviço"}
           </p>
         </div>
 

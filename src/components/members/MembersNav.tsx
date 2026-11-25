@@ -1,6 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Users, CalendarClock, Upload, Settings } from "lucide-react";
+import { IS_CARTEIRA } from "@/lib/appVariant";
+import { OpenCarteiraPanelButton } from "./OpenCarteiraPanelButton";
 
 const links = [
   { to: "/filiados", label: "Filiados", icon: Users, end: true },
@@ -31,6 +33,8 @@ export function MembersNav() {
           {label}
         </NavLink>
       ))}
+      {/* No sistema de OS: atalho para o mesmo painel dentro da carteira */}
+      {!IS_CARTEIRA && <OpenCarteiraPanelButton />}
     </nav>
   );
 }
