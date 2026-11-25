@@ -17,6 +17,11 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # Supabase self-hosted na VPS. A URL e a chave anon são públicas por
+  # natureza (vão dentro do app que o navegador baixa), por isso ficam aqui
+  # e não em Secrets: evita colar a chave à mão (o chat trocava o hífen).
+  SUPABASE_URL: https://supabase.armascon.com.br
+  SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzk1NjE4MTI1LCJleHAiOjIxMTA5NzgxMjV9.U1xSxPsZhu_U80wMPXUfxP8ImF-NT34O1NQELvUVLRg
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -64,8 +69,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           # As VITE_* são embutidas no bundle em tempo de build
           build-args: |
-            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+            VITE_SUPABASE_URL=${{ env.SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ env.SUPABASE_ANON_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -121,8 +126,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
+            VITE_SUPABASE_URL=${{ env.SUPABASE_URL }}
+            VITE_SUPABASE_ANON_KEY=${{ env.SUPABASE_ANON_KEY }}
           cache-from: type=gha,scope=carteira
           cache-to: type=gha,mode=max,scope=carteira
 
