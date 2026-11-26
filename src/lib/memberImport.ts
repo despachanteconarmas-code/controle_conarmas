@@ -14,11 +14,12 @@ export type ImportField =
   | "notes";
 
 export const importFields: { key: ImportField; label: string; required: boolean; hints: string[] }[] = [
-  { key: "member_number", label: "Nº de filiação", required: true, hints: ["filiacao", "matricula", "codigo", "cod", "numero", "n", "no", "id cliente", "cliente"] },
+  { key: "member_number", label: "Nº de filiação", required: true, hints: ["filiacao", "matricula", "codigo", "cod", "numero", "n", "no", "id cliente", "cliente", "matricula sistema"] },
   { key: "full_name", label: "Nome", required: true, hints: ["nome", "nome completo", "filiado", "atirador"] },
   { key: "cpf", label: "CPF", required: true, hints: ["cpf"] },
-  { key: "membership_expires_at", label: "Vencimento da filiação", required: true, hints: ["vencimento", "validade filiacao", "vencimento filiacao", "venc", "validade"] },
-  { key: "phone", label: "WhatsApp", required: false, hints: ["whatsapp", "celular", "telefone", "fone", "contato"] },
+  // Shooting House exporta "mensalidade_anuidade" = "De: 31/05/2026 Ate: 30/05/2027 Valor: 600.00"
+  { key: "membership_expires_at", label: "Vencimento da filiação", required: true, hints: ["vencimento", "validade filiacao", "vencimento filiacao", "venc", "validade", "mensalidade anuidade", "anuidade", "mensalidade"] },
+  { key: "phone", label: "WhatsApp", required: false, hints: ["whatsapp", "celular", "telefone", "telefones", "fone", "contato"] },
   { key: "email", label: "E-mail", required: false, hints: ["email", "e mail"] },
   { key: "cr_number", label: "Nº do CR", required: false, hints: ["cr", "numero cr", "n cr", "certificado de registro"] },
   { key: "cr_expires_at", label: "Validade do CR", required: false, hints: ["validade cr", "vencimento cr", "val cr", "venc cr"] },
@@ -123,7 +124,10 @@ export function parseDate(v: Cell): string | null {
     const dt = new Date(Date.UTC(1899, 11, 30) + serial * 86_400_000);
     return dt.toISOString().slice(0, 10);
   }
-  const s = String(v).trim();
+  let s = String(v).trim();
+  // Período "De: 31/05/2026 Ate: 30/05/2027 Valor: 600.00": vale a data final
+  const period = s.match(/At[eé]\s*:?\s*([\d/.-]+)/i);
+  if (period) s = period[1];
   let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (m) return iso(+m[1], +m[2], +m[3]);
   m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/);
@@ -141,11 +145,20 @@ export function normalizeCPF(v: Cell): string {
   return digits.length >= 8 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
 
-/** Telefone com DDD, sem o 55. Devolve null se não der 10 ou 11 dígitos. */
+/**
+ * Telefone com DDD, sem o 55. Devolve null se não der 10 ou 11 dígitos.
+ * Com vários números ("+55 (37) 9... / +55 (37) 9..."), fica o primeiro
+ * válido. Celular cadastrado antes do 9º dígito (8 dígitos começando com
+ * 6 a 9) ganha o 9 na frente.
+ */
 export function normalizePhone(v: Cell): string | null {
-  let digits = text(v).replace(/\D/g, "");
-  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) digits = digits.slice(2);
-  if (digits.length === 11 || digits.length === 10) return digits;
+  for (const part of text(v).split(/[/,;|]| e /)) {
+    let digits = part.replace(/\D/g, "");
+    // "+55" explícito sai sempre; sem o "+", só quando sobra DDD + número
+    if (/^\s*\+\s*55/.test(part) || ((digits.length === 12 || digits.length === 13) && digits.startsWith("55"))) digits = digits.slice(2);
+    if (digits.length === 10 && /^[6-9]$/.test(digits[2])) digits = digits.slice(0, 2) + "9" + digits.slice(2);
+    if (digits.length === 11 || digits.length === 10) return digits;
+  }
   return null;
 }
 
