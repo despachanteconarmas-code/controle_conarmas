@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -168,7 +169,7 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
             </div>
             <div className="space-y-2">
               <Label htmlFor="fa-exp">Validade do CRAF</Label>
-              <Input id="fa-exp" type="date" value={form.sigma_expires_at} onChange={(e) => set("sigma_expires_at")(e.target.value)} />
+              <DateInput id="fa-exp" value={form.sigma_expires_at} onChange={set("sigma_expires_at")} />
             </div>
           </div>
         </div>

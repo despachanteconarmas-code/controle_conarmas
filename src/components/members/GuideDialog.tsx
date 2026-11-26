@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -104,16 +105,15 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="gt-issued">Emissão</Label>
-              <Input id="gt-issued" type="date" value={issuedAt} onChange={(e) => onIssuedChange(e.target.value)} />
+              <DateInput id="gt-issued" value={issuedAt} onChange={onIssuedChange} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="gt-expires">Validade *</Label>
-              <Input
+              <DateInput
                 id="gt-expires"
-                type="date"
                 value={expiresAt}
-                onChange={(e) => {
-                  setExpiresAt(e.target.value);
+                onChange={(v) => {
+                  setExpiresAt(v);
                   setExpiryTouched(true);
                 }}
               />

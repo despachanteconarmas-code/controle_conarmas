@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -81,7 +82,7 @@ export function RenewDialog({ member, open, onOpenChange }: RenewDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="paid-at">Data do pagamento</Label>
-              <Input id="paid-at" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+              <DateInput id="paid-at" value={paidAt} onChange={setPaidAt} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="years">Anos</Label>

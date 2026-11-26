@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { formatCPF, formatPhone } from "@/lib/formatters";
@@ -100,7 +100,7 @@ export default function ProfilePage({ data, refresh }: { data: CarteiraData; ref
         <div className="flex gap-2">
           <div className="flex-1">
             <Label htmlFor="cr-date" className="sr-only">Validade do CR</Label>
-            <Input id="cr-date" type="date" value={crDate} onChange={(e) => setCrDate(e.target.value)} />
+            <DateInput id="cr-date" value={crDate} onChange={setCrDate} />
           </div>
           <Button onClick={saveCr} disabled={savingCr || crDate === (member.cr_expires_at ?? "")}>
             {savingCr ? "Salvando..." : "Salvar"}
