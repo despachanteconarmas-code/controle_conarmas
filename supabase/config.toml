@@ -28,3 +28,6 @@ verify_jwt = false
 # Avisos de vencimento (chamada pelo n8n com x-carteira-secret)
 [functions.member-reminders]
 verify_jwt = false
+
+[functions.member-push]
+verify_jwt = false

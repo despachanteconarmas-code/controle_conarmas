@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { CardPdfFormat } from "@/lib/cardPdf";
 import { expiryStatus, whatsappLink } from "@/lib/members";
 import { CardView } from "../components/CardView";
+import { PushCard } from "../components/PushCard";
 import { CarteiraData } from "../data";
 import { AlertTriangle, Download, Share } from "lucide-react";
 
@@ -114,6 +115,8 @@ export default function CardPage({ data }: { data: CarteiraData }) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <PushCard compact />
 
       {!standalone && (installEvent || isIos) && (
         <div className="rounded-lg border bg-card p-4 text-sm">

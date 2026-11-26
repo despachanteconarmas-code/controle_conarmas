@@ -107,6 +107,42 @@ export type Database = {
         }
         Relationships: []
       }
+      member_push_subscriptions: {
+        Row: {
+          id: string
+          member_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+          last_sent_at: string | null
+          failures: number
+        }
+        Insert: {
+          id?: string
+          member_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+          last_sent_at?: string | null
+          failures?: number
+        }
+        Update: {
+          id?: string
+          member_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+          last_sent_at?: string | null
+          failures?: number
+        }
+        Relationships: []
+      }
       member_firearms: {
         Row: {
           id: string
@@ -654,6 +690,14 @@ export type Database = {
       regenerate_verify_token: {
         Args: { p_member_id: string }
         Returns: string
+      }
+      save_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string | null }
+        Returns: undefined
+      }
+      delete_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: undefined
       }
       renew_membership: {
         Args: { p_member_id: string; p_paid_at: string; p_years?: number }

@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useState 
 import type { Session } from "@supabase/supabase-js";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "./supabase";
+import { disablePush } from "./push";
 import type { CardSettings, Member, MemberFirearm, MembershipRenewal, TrafficGuide } from "@/lib/members";
 
 export type FirearmWithGuides = MemberFirearm & { traffic_guides: TrafficGuide[] };
@@ -51,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Quem sai do aparelho para de receber os avisos nele
+    await disablePush().catch(() => {});
     clearCache();
     queryClient.clear();
     await supabase.auth.signOut();

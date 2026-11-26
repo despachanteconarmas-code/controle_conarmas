@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { formatCPF, formatPhone } from "@/lib/formatters";
 import { PhotoCropper } from "../components/PhotoCropper";
+import { PushCard } from "../components/PushCard";
 import { supabase } from "../supabase";
 import { CarteiraData, useAuth } from "../data";
 import { Camera, ImageUp, LogOut, UserRound } from "lucide-react";
@@ -107,6 +108,8 @@ export default function ProfilePage({ data, refresh }: { data: CarteiraData; ref
           </Button>
         </div>
       </section>
+
+      <PushCard />
 
       <section className="rounded-xl border bg-card p-5 text-sm">
         <h2 className="mb-3 font-semibold">Seus dados</h2>

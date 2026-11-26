@@ -2,7 +2,7 @@
 // Objetivo: abrir o app (carteirinha e Modo Livro) mesmo sem sinal no
 // estande. Os dados do filiado ficam no localStorage do próprio app; aqui
 // só se guarda o "casco" (HTML, JS, CSS, imagens).
-const CACHE = "carteira-v1";
+const CACHE = "carteira-v2";
 const SHELL = ["/", "/index.html", "/manifest.webmanifest", "/brasao.jpg", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
@@ -50,5 +50,46 @@ self.addEventListener("fetch", (event) => {
           return res;
         }),
     ),
+  );
+});
+
+// ---------------------------------------------------------------------
+// Avisos de vencimento (Web Push), enviados pela Edge Function member-push
+// ---------------------------------------------------------------------
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Carteira Conarmas";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icon-192.png",
+      badge: "/favicon-32.png",
+      tag: data.tag || "conarmas",
+      renotify: true,
+      data: { url: data.url || "/" },
+    }),
+  );
+});
+
+// Toque na notificação: volta para o app aberto ou abre na tela certa
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (new URL(client.url).origin === self.location.origin && "focus" in client) {
+          if ("navigate" in client) client.navigate(target).catch(() => {});
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
   );
 });

@@ -116,6 +116,20 @@ export default function MemberDetails() {
     },
   });
 
+  // Aparelhos com os avisos de vencimento ativados no app
+  const { data: pushDevices = 0 } = useQuery({
+    queryKey: ["member-push", id],
+    enabled: !!member,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("member_push_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("member_id", id!);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const { data: renewals = [] } = useQuery({
     queryKey: ["member-renewals", id],
     enabled: !!member,
@@ -408,6 +422,13 @@ export default function MemberDetails() {
                 <CardTitle className="text-base">Acesso ao app</CardTitle>
                 <CardDescription>
                   {member.auth_user_id ? "O filiado já entrou no app." : "O filiado ainda não entrou no app."}
+                  {member.auth_user_id && (
+                    <span className="mt-1 block">
+                      {pushDevices > 0
+                        ? `Avisos no celular ativados (${pushDevices} ${pushDevices === 1 ? "aparelho" : "aparelhos"}).`
+                        : "Avisos no celular desativados."}
+                    </span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
