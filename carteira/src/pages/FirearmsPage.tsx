@@ -30,7 +30,12 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
   const guides = data.guides ?? [];
   const { toast } = useToast();
   const [firearmDialog, setFirearmDialog] = useState<{ open: boolean; item?: MemberFirearm | null }>({ open: false });
-  const [guideDialog, setGuideDialog] = useState<{ open: boolean; item?: TrafficGuide | null }>({ open: false });
+  const [guideDialog, setGuideDialog] = useState<{
+    open: boolean;
+    firearmId?: string | null;
+    item?: TrafficGuide | null;
+    copyFrom?: TrafficGuide | null;
+  }>({ open: false });
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   const readOnlyOptions = useMemo(() => {
@@ -40,13 +45,21 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
 
   const name = (f: MemberFirearm) =>
     [labelOf(options, "firearm_type", f.type), labelOf(options, "brand", f.brand), f.model].filter(Boolean).join(" ") || "Arma";
+  const firearmIds = new Set(firearms.map((f) => f.id));
+  const orphanGuides = guides.filter((g) => !g.firearm_id || !firearmIds.has(g.firearm_id));
+  const guideFirearms = firearms.map((f) => ({
+    id: f.id,
+    label: `${name(f)}${f.sigma_number ? ` · SIGMA ${f.sigma_number}` : ""}`,
+  }));
 
   const remove = useMutation({
     mutationFn: async (c: Confirm) => {
       const table = c.kind === "firearm" ? "member_firearms" : "traffic_guides";
       const { error } = await supabase.from(table).delete().eq("id", c.item.id);
       if (error) throw error;
-      if (c.kind === "guide") await removeGuideFiles(supabase, [c.item.file_path]);
+      // Excluir a arma leva as GTs dela junto (cascade); os arquivos saem aqui
+      const files = c.kind === "guide" ? [c.item.file_path] : guides.filter((g) => g.firearm_id === c.item.id).map((g) => g.file_path);
+      await removeGuideFiles(supabase, files);
     },
     onSuccess: (_, c) => {
       toast({ title: c.kind === "firearm" ? "Arma excluída" : "GT excluída" });
@@ -101,27 +114,40 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
               </Button>
             </div>
           </div>
+
+          {/* GTs da arma: uma por endereço */}
+          <div className="mt-4 space-y-2 border-t pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Guias de Tráfego</p>
+              <Button variant="ghost" size="sm" onClick={() => setGuideDialog({ open: true, firearmId: f.id })}>
+                <Plus className="mr-1 h-4 w-4" /> GT
+              </Button>
+            </div>
+            <GuideList
+              guides={guides.filter((g) => g.firearm_id === f.id)}
+              onEdit={(g) => setGuideDialog({ open: true, item: g })}
+              onDuplicate={(g) => setGuideDialog({ open: true, copyFrom: g })}
+              onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+              emptyText="Nenhuma GT. Com dois endereços, cadastre uma e use Duplicar."
+              client={supabase}
+            />
+          </div>
         </div>
       ))}
 
-      <div className="flex items-center justify-between gap-2 pt-4">
-        <div>
-          <h2 className="text-base font-semibold">Guias de Tráfego</h2>
-          <p className="text-xs text-muted-foreground">Uma GT por endereço do acervo</p>
+      {orphanGuides.length > 0 && (
+        <div className="space-y-2 rounded-xl border border-warning/50 bg-card p-4">
+          <p className="text-sm font-semibold">GTs sem arma</p>
+          <p className="text-xs text-muted-foreground">Toque no lápis e escolha a arma de cada uma.</p>
+          <GuideList
+            guides={orphanGuides}
+            onEdit={(g) => setGuideDialog({ open: true, item: g })}
+            onDuplicate={(g) => setGuideDialog({ open: true, copyFrom: g })}
+            onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+            client={supabase}
+          />
         </div>
-        <Button size="sm" onClick={() => setGuideDialog({ open: true, item: null })} className="shrink-0">
-          <Plus className="mr-1 h-4 w-4" /> GT
-        </Button>
-      </div>
-      <div className="rounded-xl border bg-card p-4">
-        <GuideList
-          guides={guides}
-          onEdit={(g) => setGuideDialog({ open: true, item: g })}
-          onDelete={(g) => setConfirm({ kind: "guide", item: g })}
-          emptyText="Nenhuma GT cadastrada. Se você tiver dois endereços de acervo, cadastre uma GT para cada."
-          client={supabase}
-        />
-      </div>
+      )}
 
       <FirearmDialog
         memberId={member.id}
@@ -137,8 +163,11 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
         memberId={member.id}
         open={guideDialog.open}
         onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
+        firearms={guideFirearms}
+        firearmId={guideDialog.firearmId}
         guide={guideDialog.item}
-        existingCount={guides.length}
+        copyFrom={guideDialog.copyFrom}
+        allGuides={guides}
         client={supabase}
         onSaved={refresh}
       />
@@ -148,7 +177,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
           <AlertDialogHeader>
             <AlertDialogTitle>{confirm?.kind === "firearm" ? "Excluir arma?" : "Excluir GT?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm?.kind === "firearm" ? "A arma sai da sua carteira." : "A GT sai da sua carteira."}
+              {confirm?.kind === "firearm" ? "A arma e as GTs dela saem da sua carteira." : "A GT sai da sua carteira."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

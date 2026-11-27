@@ -46,10 +46,10 @@ Deno.serve(async (req) => {
         .eq("member_id", member.id)
         .order("position")
         .order("created_at"),
-      // Só uso e validade: o endereço da GT é o endereço do filiado
+      // Só validade: o endereço da GT é o endereço do filiado
       admin
         .from("traffic_guides")
-        .select("permitted, restricted, expires_at, issued_at")
+        .select("firearm_id, expires_at, issued_at")
         .eq("member_id", member.id)
         .order("expires_at"),
       admin.from("option_lists").select("category, value, label").in("category", ["firearm_type", "brand", "caliber"]),
@@ -86,8 +86,14 @@ Deno.serve(async (req) => {
         caliber: label("caliber", f.caliber),
         restriction: f.restriction,
         sigma_expires_at: f.sigma_expires_at,
+        traffic_guides: (guides ?? [])
+          .filter((g) => g.firearm_id === f.id)
+          .map(({ expires_at, issued_at }) => ({ expires_at, issued_at })),
       })),
-      traffic_guides: guides ?? [],
+      // GTs antigas ainda sem arma escolhida
+      traffic_guides: (guides ?? [])
+        .filter((g) => !g.firearm_id || !(firearms ?? []).some((f) => f.id === g.firearm_id))
+        .map(({ expires_at, issued_at }) => ({ expires_at, issued_at })),
       checked_at: new Date().toISOString(),
     });
   } catch (e) {

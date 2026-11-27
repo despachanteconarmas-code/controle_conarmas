@@ -50,7 +50,7 @@ import {
   MessageCircle,
   QrCode,
   Crosshair,
-  Route,
+  AlertTriangle,
   UserCheck,
 } from "lucide-react";
 
@@ -84,7 +84,12 @@ export default function MemberDetails() {
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
   const [firearmDialog, setFirearmDialog] = useState<{ open: boolean; item?: MemberFirearm | null }>({ open: false });
-  const [guideDialog, setGuideDialog] = useState<{ open: boolean; item?: TrafficGuide | null }>({ open: false });
+  const [guideDialog, setGuideDialog] = useState<{
+    open: boolean;
+    firearmId?: string | null;
+    item?: TrafficGuide | null;
+    copyFrom?: TrafficGuide | null;
+  }>({ open: false });
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   useEffect(() => {
@@ -178,6 +183,8 @@ export default function MemberDetails() {
       } else if (c.kind === "firearm") {
         const { error } = await supabase.from("member_firearms").delete().eq("id", c.item.id);
         if (error) throw error;
+        // As GTs saem junto (cascade); os arquivos delas, aqui
+        await removeGuideFiles(supabase, guides.filter((g) => g.firearm_id === c.item.id).map((g) => g.file_path));
       } else if (c.kind === "guide") {
         const { error } = await supabase.from("traffic_guides").delete().eq("id", c.item.id);
         if (error) throw error;
@@ -247,6 +254,12 @@ export default function MemberDetails() {
 
   const firearmLabel = (f: MemberFirearm) =>
     [firearmType.getLabel(f.type), brand.getLabel(f.brand), f.model].filter(Boolean).join(" ") || "Arma";
+  const firearmIds = new Set(firearms.map((f) => f.id));
+  const orphanGuides = guides.filter((g) => !g.firearm_id || !firearmIds.has(g.firearm_id));
+  const guideFirearms = firearms.map((f, i) => ({
+    id: f.id,
+    label: `#${i + 1} ${firearmLabel(f)}${f.sigma_number ? ` · SIGMA ${f.sigma_number}` : ""}`,
+  }));
 
   const qrUrl = verifyUrl(member.verify_token);
   const firstName = member.full_name.split(" ")[0];
@@ -263,7 +276,7 @@ export default function MemberDetails() {
     },
     firearm: {
       title: "Excluir arma?",
-      body: "A arma será removida. Esta ação não pode ser desfeita.",
+      body: "A arma e as GTs dela serão removidas. Esta ação não pode ser desfeita.",
       action: "Excluir",
     },
     guide: { title: "Excluir GT?", body: "A Guia de Tráfego será removida.", action: "Excluir" },
@@ -388,33 +401,48 @@ export default function MemberDetails() {
                         </Button>
                       </div>
                     </div>
+
+                    {/* GTs da arma: uma por endereço */}
+                    <div className="mt-4 space-y-2 border-t pt-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Guias de Tráfego</p>
+                        <Button variant="ghost" size="sm" onClick={() => setGuideDialog({ open: true, firearmId: f.id })}>
+                          <Plus className="mr-1 h-4 w-4" /> GT
+                        </Button>
+                      </div>
+                      <GuideList
+                        guides={guides.filter((g) => g.firearm_id === f.id)}
+                        onEdit={(g) => setGuideDialog({ open: true, item: g })}
+                        onDuplicate={(g) => setGuideDialog({ open: true, copyFrom: g })}
+                        onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+                        emptyText="Nenhuma GT. Com dois endereços, cadastre uma e use Duplicar."
+                      />
+                    </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Route className="h-5 w-5" /> Guias de Tráfego
+            {orphanGuides.length > 0 && (
+              <Card className="border-warning/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <AlertTriangle className="h-5 w-5 text-warning" /> GTs sem arma
                   </CardTitle>
-                  <CardDescription>Uma GT por endereço do acervo, cada uma com a sua validade</CardDescription>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => setGuideDialog({ open: true, item: null })}>
-                  <Plus className="mr-1 h-4 w-4" />
-                  GT
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <GuideList
-                  guides={guides}
-                  onEdit={(g) => setGuideDialog({ open: true, item: g })}
-                  onDelete={(g) => setConfirm({ kind: "guide", item: g })}
-                  emptyText="Nenhuma GT cadastrada. Se o atirador tiver dois endereços, cadastre uma GT para cada."
-                />
-              </CardContent>
-            </Card>
+                  <CardDescription>
+                    Lançadas antes da GT ser ligada à arma. Clique no lápis e escolha a arma de cada uma.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <GuideList
+                    guides={orphanGuides}
+                    onEdit={(g) => setGuideDialog({ open: true, item: g })}
+                    onDuplicate={(g) => setGuideDialog({ open: true, copyFrom: g })}
+                    onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Coluna lateral */}
@@ -516,8 +544,11 @@ export default function MemberDetails() {
         memberId={member.id}
         open={guideDialog.open}
         onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
+        firearms={guideFirearms}
+        firearmId={guideDialog.firearmId}
         guide={guideDialog.item}
-        existingCount={guides.length}
+        copyFrom={guideDialog.copyFrom}
+        allGuides={guides}
       />
 
       <AlertDialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>

@@ -1,23 +1,23 @@
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/members/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase as panelClient } from "@/integrations/supabase/client";
-import { formatDateBR, guideUseLabel, TrafficGuide } from "@/lib/members";
+import { formatDateBR, TrafficGuide } from "@/lib/members";
 import { DbClient, openGuideFile } from "@/lib/guideFiles";
-import { MapPin, Paperclip, Pencil, Trash2 } from "lucide-react";
+import { Copy, MapPin, Paperclip, Pencil, Trash2 } from "lucide-react";
 
 interface GuideListProps {
   guides: TrafficGuide[];
   onEdit: (g: TrafficGuide) => void;
+  onDuplicate: (g: TrafficGuide) => void;
   onDelete: (g: TrafficGuide) => void;
   emptyText?: string;
   /** Cliente com a sessão de quem usa a tela. No app do filiado, o da carteira. */
   client?: DbClient;
 }
 
-/** GTs do filiado, uma por endereço do acervo, da que vence primeiro */
-export function GuideList({ guides, onEdit, onDelete, emptyText = "Nenhuma GT cadastrada.", client }: GuideListProps) {
+/** GTs de uma arma, uma por endereço, da que vence primeiro */
+export function GuideList({ guides, onEdit, onDuplicate, onDelete, emptyText = "Nenhuma GT cadastrada.", client }: GuideListProps) {
   const { toast } = useToast();
   if (guides.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
 
@@ -36,10 +36,7 @@ export function GuideList({ guides, onEdit, onDelete, emptyText = "Nenhuma GT ca
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="break-words">{g.address}</span>
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={g.restricted ? "destructive" : "secondary"}>{guideUseLabel(g)}</Badge>
-              <StatusBadge expiresAt={g.expires_at} />
-            </div>
+            <StatusBadge expiresAt={g.expires_at} />
             <p className="text-xs text-muted-foreground">
               {g.guide_number && <>Nº {g.guide_number} · </>}
               {g.issued_at && <>Emitida em {formatDateBR(g.issued_at)} · </>}
@@ -53,6 +50,16 @@ export function GuideList({ guides, onEdit, onDelete, emptyText = "Nenhuma GT ca
             )}
           </div>
           <div className="flex shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onDuplicate(g)}
+              aria-label="Duplicar GT para outro endereço"
+              title="Duplicar para outro endereço"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(g)} aria-label="Editar GT" title="Editar GT">
               <Pencil className="h-3.5 w-3.5" />
             </Button>

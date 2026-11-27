@@ -147,12 +147,6 @@ export const restrictionLabels: Record<Restriction, string> = {
   RESTRITO: "Restrito",
 };
 
-/** "Permitido", "Restrito" ou "Permitido e restrito" */
-export function guideUseLabel(g: { permitted: boolean; restricted: boolean }): string {
-  if (g.permitted && g.restricted) return "Permitido e restrito";
-  return g.restricted ? "Restrito" : "Permitido";
-}
-
 export const expirationKindLabels: Record<string, string> = {
   FILIACAO: "Filiação",
   CR: "CR",

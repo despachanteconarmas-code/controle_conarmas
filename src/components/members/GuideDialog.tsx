@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,15 +28,27 @@ import {
   uploadGuideFile,
   validateGuideFile,
 } from "@/lib/guideFiles";
-import { Eye, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
+import { Copy, Eye, FileText, Image as ImageIcon, Upload, X } from "lucide-react";
+
+export interface GuideFirearmOption {
+  id: string;
+  label: string;
+}
 
 interface GuideDialogProps {
   memberId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Armas do filiado, para escolher de qual é a GT */
+  firearms: GuideFirearmOption[];
+  /** Arma já escolhida ao abrir (botão "+ GT" dentro da arma) */
+  firearmId?: string | null;
+  /** GT que está sendo editada */
   guide?: TrafficGuide | null;
-  /** Quantas GTs o filiado já tem (para o título "2º endereço") */
-  existingCount?: number;
+  /** Duplicar: nova GT com os dados desta, para só trocar o endereço */
+  copyFrom?: TrafficGuide | null;
+  /** Todas as GTs do filiado (para o título "2º endereço") */
+  allGuides?: TrafficGuide[];
   /** Cliente com a sessão de quem usa a tela. No app do filiado, o da carteira. */
   client?: DbClient;
   onSaved?: () => void;
@@ -46,17 +58,28 @@ const isImage = (type?: string | null, name?: string | null) =>
   (type ?? "").startsWith("image/") || /\.(jpe?g|png|webp|heic|heif)$/i.test(name ?? "");
 
 /**
- * GT do filiado: uma por endereço do acervo, cobrindo uso permitido,
- * restrito ou os dois, cada uma com a sua validade e, se quiser, o arquivo.
+ * GT de uma arma, para um endereço. Arma com dois endereços tem duas GTs;
+ * "Duplicar" copia tudo e deixa o endereço pronto para trocar.
  */
-export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount = 0, client, onSaved }: GuideDialogProps) {
+export function GuideDialog({
+  memberId,
+  open,
+  onOpenChange,
+  firearms,
+  firearmId,
+  guide,
+  copyFrom,
+  allGuides = [],
+  client,
+  onSaved,
+}: GuideDialogProps) {
   const supabase = client ?? panelClient;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLTextAreaElement>(null);
+  const [firearm, setFirearm] = useState("");
   const [address, setAddress] = useState("");
-  const [permitted, setPermitted] = useState(true);
-  const [restricted, setRestricted] = useState(false);
   const [number, setNumber] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -69,17 +92,26 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
 
   useEffect(() => {
     if (!open) return;
-    setAddress(guide?.address ?? "");
-    setPermitted(guide ? guide.permitted : true);
-    setRestricted(guide?.restricted ?? false);
-    setNumber(guide?.guide_number ?? "");
-    setIssuedAt(guide?.issued_at ?? "");
-    setExpiresAt(guide?.expires_at ?? "");
-    setExpiryTouched(!!guide);
+    const base = guide ?? copyFrom ?? null;
+    setFirearm(base?.firearm_id ?? firearmId ?? (firearms.length === 1 ? firearms[0].id : ""));
+    setAddress(base?.address ?? "");
+    setNumber(base?.guide_number ?? "");
+    setIssuedAt(base?.issued_at ?? "");
+    setExpiresAt(base?.expires_at ?? "");
+    setExpiryTouched(!!base);
     setNewFile(null);
     setDropExisting(false);
     setDragActive(false);
-  }, [open, guide]);
+    // Duplicar: o endereço já vem selecionado, é só digitar o novo
+    if (copyFrom) {
+      setTimeout(() => {
+        addressRef.current?.focus();
+        addressRef.current?.select();
+      }, 50);
+    }
+    // Só ao abrir: "firearms" muda a cada render do pai e apagaria o que foi digitado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, guide, copyFrom, firearmId]);
 
   const onIssuedChange = (value: string) => {
     setIssuedAt(value);
@@ -103,9 +135,8 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
       if (newFile) uploaded = await uploadGuideFile(supabase, memberId, newFile);
 
       const payload = {
+        firearm_id: firearm,
         address: address.trim(),
-        permitted,
-        restricted,
         guide_number: number.trim() || null,
         issued_at: issuedAt || null,
         expires_at: expiresAt,
@@ -125,7 +156,7 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["member-guides", memberId] });
       queryClient.invalidateQueries({ queryKey: ["member-expirations"] });
-      toast({ title: guide ? "GT atualizada" : "GT cadastrada" });
+      toast({ title: guide ? "GT atualizada" : copyFrom ? "GT duplicada" : "GT cadastrada" });
       onOpenChange(false);
       onSaved?.();
     },
@@ -134,12 +165,19 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
     },
   });
 
-  const noUse = !permitted && !restricted;
+  // Quantas GTs a arma escolhida já tem, para o título "2º endereço"
+  const sameFirearm = allGuides.filter((g) => g.firearm_id === firearm && g.id !== guide?.id).length;
+  const firearmLabel = firearms.find((f) => f.id === firearm)?.label;
   const title = guide
     ? "Editar Guia de Tráfego"
-    : existingCount > 0
-      ? `Nova GT (${existingCount + 1}º endereço)`
-      : "Nova Guia de Tráfego";
+    : copyFrom
+      ? "Duplicar GT"
+      : sameFirearm > 0
+        ? `Nova GT (${sameFirearm + 1}º endereço)`
+        : "Nova Guia de Tráfego";
+  const description = copyFrom
+    ? "Os dados da GT foram copiados. Troque o endereço e ajuste o que for diferente."
+    : "Uma GT para cada endereço. Arma com dois endereços tem duas GTs.";
 
   // O que mostrar no campo de arquivo
   const savedFile = guide?.file_path && !dropExisting ? guide : null;
@@ -154,38 +192,44 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            Uma GT para cada endereço do acervo. Com dois endereços, cadastre duas GTs.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            {copyFrom && <Copy className="h-4 w-4 text-primary" aria-hidden />}
+            {title}
+          </DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="gt-address">Endereço do acervo *</Label>
+            <Label>Arma *</Label>
+            <Select value={firearm || undefined} onValueChange={setFirearm}>
+              <SelectTrigger aria-label="Arma da GT">
+                <SelectValue placeholder="Escolha a arma" />
+              </SelectTrigger>
+              <SelectContent>
+                {firearms.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {firearms.length === 0 && (
+              <p className="text-xs text-destructive">Cadastre a arma primeiro para lançar a GT dela.</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gt-address">Endereço *</Label>
             <Textarea
               id="gt-address"
+              ref={addressRef}
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Endereço que consta na GT"
               rows={2}
             />
           </div>
-
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium leading-none">Uso *</legend>
-            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox checked={permitted} onCheckedChange={(v) => setPermitted(v === true)} />
-                Permitido
-              </label>
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Checkbox checked={restricted} onCheckedChange={(v) => setRestricted(v === true)} />
-                Restrito
-              </label>
-            </div>
-            {noUse && <p className="text-xs text-destructive">Marque permitido, restrito ou os dois.</p>}
-          </fieldset>
 
           <div className="space-y-2">
             <Label htmlFor="gt-number">Nº da GT</Label>
@@ -295,6 +339,9 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
                 </span>
               </button>
             )}
+            {copyFrom?.file_path && !newFile && (
+              <p className="text-xs text-muted-foreground">O arquivo não é copiado: anexe o da GT deste endereço.</p>
+            )}
           </div>
         </div>
 
@@ -302,7 +349,11 @@ export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={save.isPending}>
             Cancelar
           </Button>
-          <Button onClick={() => save.mutate()} disabled={!address.trim() || !expiresAt || noUse || save.isPending}>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={!firearm || !address.trim() || !expiresAt || save.isPending}
+            title={firearmLabel ? `GT da ${firearmLabel}` : undefined}
+          >
             {save.isPending ? (newFile ? "Enviando..." : "Salvando...") : "Salvar"}
           </Button>
         </DialogFooter>

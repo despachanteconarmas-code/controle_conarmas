@@ -199,8 +199,7 @@ export type Database = {
           id: string
           member_id: string
           address: string
-          permitted: boolean
-          restricted: boolean
+          firearm_id: string | null
           guide_number: string | null
           file_path: string | null
           file_name: string | null
@@ -215,8 +214,7 @@ export type Database = {
           id?: string
           member_id: string
           address: string
-          permitted?: boolean
-          restricted?: boolean
+          firearm_id?: string | null
           guide_number?: string | null
           file_path?: string | null
           file_name?: string | null
@@ -231,8 +229,7 @@ export type Database = {
           id?: string
           member_id?: string
           address?: string
-          permitted?: boolean
-          restricted?: boolean
+          firearm_id?: string | null
           guide_number?: string | null
           file_path?: string | null
           file_name?: string | null

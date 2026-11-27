@@ -2,9 +2,32 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/members/StatusBadge";
 import { formatDateTime } from "@/lib/formatters";
-import { formatDateBR, guideUseLabel, restrictionLabels, Restriction } from "@/lib/members";
+import { formatDateBR, restrictionLabels, Restriction } from "@/lib/members";
 import { callFunction, FunctionError } from "../supabase";
 import { ShieldCheck, UserRound } from "lucide-react";
+
+interface GuideDate {
+  expires_at: string;
+  issued_at: string | null;
+}
+
+/** Validades das GTs (sem endereço: a página é pública) */
+function GuideDates({ guides, label = "Guias de Tráfego" }: { guides: GuideDate[]; label?: string }) {
+  if (guides.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-1 border-t pt-2">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {[...guides]
+        .sort((a, b) => a.expires_at.localeCompare(b.expires_at))
+        .map((g, j) => (
+          <div key={j} className="flex items-center justify-between gap-2">
+            <span className="tabular-nums">até {formatDateBR(g.expires_at)}</span>
+            <StatusBadge expiresAt={g.expires_at} />
+          </div>
+        ))}
+    </div>
+  );
+}
 
 interface PublicCard {
   club: { club_name: string; club_cr: string };
@@ -24,9 +47,10 @@ interface PublicCard {
     caliber: string | null;
     restriction: string | null;
     sigma_expires_at: string | null;
+    traffic_guides?: GuideDate[];
   }[];
-  /** Ausente se a função ainda for a versão antiga */
-  traffic_guides?: { permitted: boolean; restricted: boolean; expires_at: string; issued_at: string | null }[];
+  /** GTs ainda sem arma escolhida */
+  traffic_guides?: GuideDate[];
   checked_at: string;
 }
 
@@ -120,26 +144,17 @@ export default function VerifyPage() {
                 <StatusBadge expiresAt={f.sigma_expires_at} className="mt-1" />
               </div>
             </div>
+            <GuideDates guides={f.traffic_guides ?? []} />
           </div>
         ))}
         {firearms.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma arma informada.</p>}
       </div>
 
       {guides.length > 0 && (
-        <>
-          <h2 className="mb-2 mt-6 text-sm font-semibold text-muted-foreground">Guias de Tráfego ({guides.length})</h2>
-          <div className="space-y-2">
-            {guides.map((g, i) => (
-              <div key={i} className="flex items-center justify-between gap-2 rounded-xl border bg-card p-4 text-sm">
-                <div>
-                  <p className="font-semibold">{guideUseLabel(g)}</p>
-                  <p className="tabular-nums text-muted-foreground">até {formatDateBR(g.expires_at)}</p>
-                </div>
-                <StatusBadge expiresAt={g.expires_at} />
-              </div>
-            ))}
-          </div>
-        </>
+        <div className="mt-3 rounded-xl border bg-card p-4 text-sm">
+          <p className="font-semibold">Outras Guias de Tráfego</p>
+          <GuideDates guides={guides} label="Arma não informada" />
+        </div>
       )}
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
