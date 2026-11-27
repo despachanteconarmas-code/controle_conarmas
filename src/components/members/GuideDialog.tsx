@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,18 +20,24 @@ import { addMonthsISO, GUIDE_VALIDITY_MONTHS, TrafficGuide } from "@/lib/members
 
 interface GuideDialogProps {
   memberId: string;
-  firearmId: string;
-  firearmLabel: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guide?: TrafficGuide | null;
+  /** Quantas GTs o filiado já tem (para o título "2º endereço") */
+  existingCount?: number;
   onSaved?: () => void;
 }
 
-export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenChange, guide, onSaved }: GuideDialogProps) {
+/**
+ * GT do filiado: uma por endereço do acervo, cobrindo uso permitido,
+ * restrito ou os dois, cada uma com a sua validade.
+ */
+export function GuideDialog({ memberId, open, onOpenChange, guide, existingCount = 0, onSaved }: GuideDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [address, setAddress] = useState("");
+  const [permitted, setPermitted] = useState(true);
+  const [restricted, setRestricted] = useState(false);
   const [number, setNumber] = useState("");
   const [issuedAt, setIssuedAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -39,7 +46,9 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
 
   useEffect(() => {
     if (!open) return;
-    setAddress(guide?.destination_address ?? "");
+    setAddress(guide?.address ?? "");
+    setPermitted(guide ? guide.permitted : true);
+    setRestricted(guide?.restricted ?? false);
     setNumber(guide?.guide_number ?? "");
     setIssuedAt(guide?.issued_at ?? "");
     setExpiresAt(guide?.expires_at ?? "");
@@ -54,7 +63,9 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
   const save = useMutation({
     mutationFn: async () => {
       const payload = {
-        destination_address: address.trim(),
+        address: address.trim(),
+        permitted,
+        restricted,
         guide_number: number.trim() || null,
         issued_at: issuedAt || null,
         expires_at: expiresAt,
@@ -63,12 +74,12 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
         const { error } = await supabase.from("traffic_guides").update(payload).eq("id", guide.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("traffic_guides").insert([{ ...payload, firearm_id: firearmId }]);
+        const { error } = await supabase.from("traffic_guides").insert([{ ...payload, member_id: memberId }]);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["member-firearms", memberId] });
+      queryClient.invalidateQueries({ queryKey: ["member-guides", memberId] });
       queryClient.invalidateQueries({ queryKey: ["member-expirations"] });
       toast({ title: guide ? "GT atualizada" : "GT cadastrada" });
       onOpenChange(false);
@@ -79,25 +90,50 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
     },
   });
 
+  const noUse = !permitted && !restricted;
+  const title = guide
+    ? "Editar Guia de Tráfego"
+    : existingCount > 0
+      ? `Nova GT (${existingCount + 1}º endereço)`
+      : "Nova Guia de Tráfego";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{guide ? "Editar Guia de Tráfego" : "Nova Guia de Tráfego"}</DialogTitle>
-          <DialogDescription>{firearmLabel}</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Uma GT para cada endereço do acervo. Com dois endereços, cadastre duas GTs.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="gt-address">Endereço de destino *</Label>
+            <Label htmlFor="gt-address">Endereço do acervo *</Label>
             <Textarea
               id="gt-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Clube, estande ou endereço que consta na GT"
+              placeholder="Endereço que consta na GT"
               rows={2}
             />
           </div>
+
+          <fieldset className="space-y-2">
+            <legend className="text-sm font-medium leading-none">Uso *</legend>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-1">
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox checked={permitted} onCheckedChange={(v) => setPermitted(v === true)} />
+                Permitido
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox checked={restricted} onCheckedChange={(v) => setRestricted(v === true)} />
+                Restrito
+              </label>
+            </div>
+            {noUse && <p className="text-xs text-destructive">Marque permitido, restrito ou os dois.</p>}
+          </fieldset>
+
           <div className="space-y-2">
             <Label htmlFor="gt-number">Nº da GT</Label>
             <Input id="gt-number" value={number} onChange={(e) => setNumber(e.target.value)} placeholder="opcional" />
@@ -128,7 +164,7 @@ export function GuideDialog({ memberId, firearmId, firearmLabel, open, onOpenCha
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={save.isPending}>
             Cancelar
           </Button>
-          <Button onClick={() => save.mutate()} disabled={!address.trim() || !expiresAt || save.isPending}>
+          <Button onClick={() => save.mutate()} disabled={!address.trim() || !expiresAt || noUse || save.isPending}>
             {save.isPending ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>

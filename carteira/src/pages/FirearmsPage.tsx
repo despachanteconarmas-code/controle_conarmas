@@ -14,20 +14,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FirearmDialog } from "@/components/members/FirearmDialog";
 import { GuideDialog } from "@/components/members/GuideDialog";
+import { GuideList } from "@/components/members/GuideList";
 import { StatusBadge } from "@/components/members/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
-import { formatDateBR, MemberFirearm, restrictionLabels, Restriction, TrafficGuide } from "@/lib/members";
+import { MemberFirearm, restrictionLabels, Restriction, TrafficGuide } from "@/lib/members";
 import { supabase } from "../supabase";
 import { CarteiraData, labelOf } from "../data";
-import { Crosshair, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { Crosshair, Pencil, Plus, Trash2 } from "lucide-react";
 
 type Confirm = { kind: "firearm"; item: MemberFirearm } | { kind: "guide"; item: TrafficGuide };
 
 export default function FirearmsPage({ data, refresh }: { data: CarteiraData; refresh: () => void }) {
   const { member, firearms, options } = data;
+  const guides = data.guides ?? [];
   const { toast } = useToast();
   const [firearmDialog, setFirearmDialog] = useState<{ open: boolean; item?: MemberFirearm | null }>({ open: false });
-  const [guideDialog, setGuideDialog] = useState<{ open: boolean; firearm?: MemberFirearm; item?: TrafficGuide | null }>({ open: false });
+  const [guideDialog, setGuideDialog] = useState<{ open: boolean; item?: TrafficGuide | null }>({ open: false });
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   const readOnlyOptions = useMemo(() => {
@@ -54,8 +56,10 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
 
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Mantenha CRAF e GTs em dia. A Conarmas vê o que você atualizar aqui.</p>
+
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted-foreground">Mantenha CRAF e GTs em dia. A Conarmas vê o que você atualizar aqui.</p>
+        <h2 className="text-base font-semibold">Armas</h2>
         <Button size="sm" onClick={() => setFirearmDialog({ open: true, item: null })} className="shrink-0">
           <Plus className="mr-1 h-4 w-4" /> Arma
         </Button>
@@ -94,43 +98,26 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
               </Button>
             </div>
           </div>
-
-          <div className="mt-4 space-y-2 border-t pt-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Guias de Tráfego</p>
-              <Button variant="ghost" size="sm" onClick={() => setGuideDialog({ open: true, firearm: f, item: null })}>
-                <Plus className="mr-1 h-4 w-4" /> GT
-              </Button>
-            </div>
-            {f.traffic_guides.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma GT cadastrada.</p>
-            ) : (
-              [...f.traffic_guides]
-                .sort((a, b) => a.expires_at.localeCompare(b.expires_at))
-                .map((g) => (
-                  <div key={g.id} className="flex items-start justify-between gap-2 rounded-lg bg-muted/50 p-3 text-sm">
-                    <div className="min-w-0">
-                      <p className="flex items-start gap-1">
-                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="break-words">{g.destination_address}</span>
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">Validade {formatDateBR(g.expires_at)}</p>
-                      <StatusBadge expiresAt={g.expires_at} className="mt-1" />
-                    </div>
-                    <div className="flex shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setGuideDialog({ open: true, firearm: f, item: g })} aria-label="Editar GT">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setConfirm({ kind: "guide", item: g })} aria-label="Excluir GT">
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
         </div>
       ))}
+
+      <div className="flex items-center justify-between gap-2 pt-4">
+        <div>
+          <h2 className="text-base font-semibold">Guias de Tráfego</h2>
+          <p className="text-xs text-muted-foreground">Uma GT por endereço do acervo</p>
+        </div>
+        <Button size="sm" onClick={() => setGuideDialog({ open: true, item: null })} className="shrink-0">
+          <Plus className="mr-1 h-4 w-4" /> GT
+        </Button>
+      </div>
+      <div className="rounded-xl border bg-card p-4">
+        <GuideList
+          guides={guides}
+          onEdit={(g) => setGuideDialog({ open: true, item: g })}
+          onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+          emptyText="Nenhuma GT cadastrada. Se você tiver dois endereços de acervo, cadastre uma GT para cada."
+        />
+      </div>
 
       <FirearmDialog
         memberId={member.id}
@@ -141,24 +128,21 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
         readOnlyOptions={readOnlyOptions}
         onSaved={refresh}
       />
-      {guideDialog.firearm && (
-        <GuideDialog
-          memberId={member.id}
-          firearmId={guideDialog.firearm.id}
-          firearmLabel={name(guideDialog.firearm)}
-          open={guideDialog.open}
-          onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
-          guide={guideDialog.item}
-          onSaved={refresh}
-        />
-      )}
+      <GuideDialog
+        memberId={member.id}
+        open={guideDialog.open}
+        onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
+        guide={guideDialog.item}
+        existingCount={guides.length}
+        onSaved={refresh}
+      />
 
       <AlertDialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{confirm?.kind === "firearm" ? "Excluir arma?" : "Excluir GT?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm?.kind === "firearm" ? "A arma e as GTs dela saem da sua carteira." : "A GT sai da sua carteira."}
+              {confirm?.kind === "firearm" ? "A arma sai da sua carteira." : "A GT sai da sua carteira."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

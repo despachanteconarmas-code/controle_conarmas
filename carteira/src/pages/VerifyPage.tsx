@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { StatusBadge } from "@/components/members/StatusBadge";
 import { formatDateTime } from "@/lib/formatters";
-import { formatDateBR, restrictionLabels, Restriction } from "@/lib/members";
+import { formatDateBR, guideUseLabel, restrictionLabels, Restriction } from "@/lib/members";
 import { callFunction, FunctionError } from "../supabase";
 import { ShieldCheck, UserRound } from "lucide-react";
 
@@ -24,8 +24,9 @@ interface PublicCard {
     caliber: string | null;
     restriction: string | null;
     sigma_expires_at: string | null;
-    traffic_guides: { expires_at: string; issued_at: string | null }[];
   }[];
+  /** Ausente se a função ainda for a versão antiga */
+  traffic_guides?: { permitted: boolean; restricted: boolean; expires_at: string; issued_at: string | null }[];
   checked_at: string;
 }
 
@@ -61,6 +62,7 @@ export default function VerifyPage() {
   }
 
   const { member, firearms, club } = data;
+  const guides = data.traffic_guides ?? [];
 
   return (
     <div className="mx-auto min-h-[100dvh] max-w-xl px-4 py-6">
@@ -118,21 +120,27 @@ export default function VerifyPage() {
                 <StatusBadge expiresAt={f.sigma_expires_at} className="mt-1" />
               </div>
             </div>
-            {f.traffic_guides.length > 0 && (
-              <div className="mt-3 space-y-1 border-t pt-2">
-                <p className="text-xs text-muted-foreground">Guias de Tráfego</p>
-                {f.traffic_guides.map((g, j) => (
-                  <div key={j} className="flex items-center justify-between gap-2">
-                    <span className="tabular-nums">até {formatDateBR(g.expires_at)}</span>
-                    <StatusBadge expiresAt={g.expires_at} />
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         ))}
         {firearms.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma arma informada.</p>}
       </div>
+
+      {guides.length > 0 && (
+        <>
+          <h2 className="mb-2 mt-6 text-sm font-semibold text-muted-foreground">Guias de Tráfego ({guides.length})</h2>
+          <div className="space-y-2">
+            {guides.map((g, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 rounded-xl border bg-card p-4 text-sm">
+                <div>
+                  <p className="font-semibold">{guideUseLabel(g)}</p>
+                  <p className="tabular-nums text-muted-foreground">até {formatDateBR(g.expires_at)}</p>
+                </div>
+                <StatusBadge expiresAt={g.expires_at} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <ShieldCheck className="h-4 w-4" /> Consulta em tempo real · {formatDateTime(data.checked_at)}

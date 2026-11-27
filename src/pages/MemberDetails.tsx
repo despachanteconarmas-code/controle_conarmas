@@ -8,6 +8,7 @@ import { MemberFormDialog } from "@/components/members/MemberFormDialog";
 import { RenewDialog } from "@/components/members/RenewDialog";
 import { FirearmDialog } from "@/components/members/FirearmDialog";
 import { GuideDialog } from "@/components/members/GuideDialog";
+import { GuideList } from "@/components/members/GuideList";
 import { MemberPhoto } from "@/components/members/MemberPhoto";
 import { CardPdfButton } from "@/components/members/CardPdfButton";
 import { Button } from "@/components/ui/button";
@@ -48,11 +49,9 @@ import {
   MessageCircle,
   QrCode,
   Crosshair,
-  MapPin,
+  Route,
   UserCheck,
 } from "lucide-react";
-
-type FirearmWithGuides = MemberFirearm & { traffic_guides: TrafficGuide[] };
 
 type Confirm =
   | { kind: "member" }
@@ -84,7 +83,7 @@ export default function MemberDetails() {
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
   const [firearmDialog, setFirearmDialog] = useState<{ open: boolean; item?: MemberFirearm | null }>({ open: false });
-  const [guideDialog, setGuideDialog] = useState<{ open: boolean; firearm?: MemberFirearm; item?: TrafficGuide | null }>({ open: false });
+  const [guideDialog, setGuideDialog] = useState<{ open: boolean; item?: TrafficGuide | null }>({ open: false });
   const [confirm, setConfirm] = useState<Confirm | null>(null);
 
   useEffect(() => {
@@ -107,12 +106,27 @@ export default function MemberDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("member_firearms")
-        .select("*, traffic_guides(*)")
+        .select("*")
         .eq("member_id", id!)
         .order("position")
         .order("created_at");
       if (error) throw error;
-      return (data ?? []) as unknown as FirearmWithGuides[];
+      return (data ?? []) as MemberFirearm[];
+    },
+  });
+
+  // GTs do filiado: uma por endereço do acervo
+  const { data: guides = [] } = useQuery({
+    queryKey: ["member-guides", id],
+    enabled: !!member,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("traffic_guides")
+        .select("*")
+        .eq("member_id", id!)
+        .order("expires_at");
+      if (error) throw error;
+      return (data ?? []) as TrafficGuide[];
     },
   });
 
@@ -147,6 +161,7 @@ export default function MemberDetails() {
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["member", id] });
     queryClient.invalidateQueries({ queryKey: ["member-firearms", id] });
+    queryClient.invalidateQueries({ queryKey: ["member-guides", id] });
     queryClient.invalidateQueries({ queryKey: ["member-renewals", id] });
     queryClient.invalidateQueries({ queryKey: ["members"] });
     queryClient.invalidateQueries({ queryKey: ["member-expirations"] });
@@ -245,7 +260,7 @@ export default function MemberDetails() {
     },
     firearm: {
       title: "Excluir arma?",
-      body: "A arma e as GTs dela serão removidas. Esta ação não pode ser desfeita.",
+      body: "A arma será removida. Esta ação não pode ser desfeita.",
       action: "Excluir",
     },
     guide: { title: "Excluir GT?", body: "A Guia de Tráfego será removida.", action: "Excluir" },
@@ -323,7 +338,7 @@ export default function MemberDetails() {
                   <CardTitle className="flex items-center gap-2">
                     <Crosshair className="h-5 w-5" /> Armas
                   </CardTitle>
-                  <CardDescription>CRAF e Guias de Tráfego de cada arma</CardDescription>
+                  <CardDescription>CRAF de cada arma</CardDescription>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => setFirearmDialog({ open: true, item: null })}>
                   <Plus className="mr-1 h-4 w-4" />
@@ -369,48 +384,31 @@ export default function MemberDetails() {
                         </Button>
                       </div>
                     </div>
-
-                    {/* GTs da arma */}
-                    <div className="mt-4 space-y-2 border-t pt-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">Guias de Tráfego</p>
-                        <Button variant="ghost" size="sm" onClick={() => setGuideDialog({ open: true, firearm: f, item: null })}>
-                          <Plus className="mr-1 h-4 w-4" /> GT
-                        </Button>
-                      </div>
-                      {f.traffic_guides.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhuma GT cadastrada.</p>
-                      ) : (
-                        [...f.traffic_guides]
-                          .sort((a, b) => a.expires_at.localeCompare(b.expires_at))
-                          .map((g) => (
-                            <div key={g.id} className="flex items-start justify-between gap-2 rounded-md bg-muted/40 p-2 text-sm">
-                              <div className="min-w-0">
-                                <p className="flex items-start gap-1">
-                                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                                  <span className="break-words">{g.destination_address}</span>
-                                </p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  {g.guide_number && <>Nº {g.guide_number} · </>}
-                                  {g.issued_at && <>Emitida em {formatDateBR(g.issued_at)} · </>}
-                                  Validade {formatDateBR(g.expires_at)}
-                                </p>
-                                <StatusBadge expiresAt={g.expires_at} className="mt-1" />
-                              </div>
-                              <div className="flex shrink-0">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setGuideDialog({ open: true, firearm: f, item: g })} aria-label="Editar GT" title="Editar GT">
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setConfirm({ kind: "guide", item: g })} aria-label="Excluir GT" title="Excluir GT">
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))
-                      )}
-                    </div>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Route className="h-5 w-5" /> Guias de Tráfego
+                  </CardTitle>
+                  <CardDescription>Uma GT por endereço do acervo, cada uma com a sua validade</CardDescription>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setGuideDialog({ open: true, item: null })}>
+                  <Plus className="mr-1 h-4 w-4" />
+                  GT
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <GuideList
+                  guides={guides}
+                  onEdit={(g) => setGuideDialog({ open: true, item: g })}
+                  onDelete={(g) => setConfirm({ kind: "guide", item: g })}
+                  emptyText="Nenhuma GT cadastrada. Se o atirador tiver dois endereços, cadastre uma GT para cada."
+                />
               </CardContent>
             </Card>
           </div>
@@ -510,16 +508,13 @@ export default function MemberDetails() {
         firearm={firearmDialog.item}
         nextPosition={firearms.length + 1}
       />
-      {guideDialog.firearm && (
-        <GuideDialog
-          memberId={member.id}
-          firearmId={guideDialog.firearm.id}
-          firearmLabel={firearmLabel(guideDialog.firearm)}
-          open={guideDialog.open}
-          onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
-          guide={guideDialog.item}
-        />
-      )}
+      <GuideDialog
+        memberId={member.id}
+        open={guideDialog.open}
+        onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
+        guide={guideDialog.item}
+        existingCount={guides.length}
+      />
 
       <AlertDialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>
         <AlertDialogContent>

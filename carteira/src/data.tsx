@@ -5,7 +5,6 @@ import { supabase } from "./supabase";
 import { disablePush } from "./push";
 import type { CardSettings, Member, MemberFirearm, MembershipRenewal, TrafficGuide } from "@/lib/members";
 
-export type FirearmWithGuides = MemberFirearm & { traffic_guides: TrafficGuide[] };
 export interface OptionLabel {
   category: string;
   value: string;
@@ -14,7 +13,9 @@ export interface OptionLabel {
 
 export interface CarteiraData {
   member: Member;
-  firearms: FirearmWithGuides[];
+  firearms: MemberFirearm[];
+  /** GTs do filiado, uma por endereço do acervo. Pode faltar no cache antigo. */
+  guides?: TrafficGuide[];
   renewals: MembershipRenewal[];
   settings: CardSettings | null;
   options: OptionLabel[];
@@ -130,18 +131,20 @@ async function fetchCarteira(userId: string): Promise<CarteiraData | null> {
   if (error) throw error;
   if (!member) return null;
 
-  const [firearms, renewals, settings, options] = await Promise.all([
-    supabase.from("member_firearms").select("*, traffic_guides(*)").eq("member_id", member.id).order("position").order("created_at"),
+  const [firearms, guides, renewals, settings, options] = await Promise.all([
+    supabase.from("member_firearms").select("*").eq("member_id", member.id).order("position").order("created_at"),
+    supabase.from("traffic_guides").select("*").eq("member_id", member.id).order("expires_at"),
     supabase.from("membership_renewals").select("*").eq("member_id", member.id).order("created_at", { ascending: false }),
     supabase.from("card_settings").select("*").eq("id", 1).maybeSingle(),
     supabase.from("option_lists").select("category, value, label").in("category", ["firearm_type", "brand", "caliber"]),
   ]);
-  for (const r of [firearms, renewals, settings, options]) if (r.error) throw r.error;
+  for (const r of [firearms, guides, renewals, settings, options]) if (r.error) throw r.error;
 
   const previous = readCache(userId)?.data ?? null;
   return {
     member: member as Member,
-    firearms: (firearms.data ?? []) as unknown as FirearmWithGuides[],
+    firearms: (firearms.data ?? []) as MemberFirearm[],
+    guides: (guides.data ?? []) as TrafficGuide[],
     renewals: (renewals.data ?? []) as MembershipRenewal[],
     settings: (settings.data ?? null) as CardSettings | null,
     options: (options.data ?? []) as OptionLabel[],

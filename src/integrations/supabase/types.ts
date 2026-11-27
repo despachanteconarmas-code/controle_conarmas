@@ -194,8 +194,10 @@ export type Database = {
       traffic_guides: {
         Row: {
           id: string
-          firearm_id: string
-          destination_address: string
+          member_id: string
+          address: string
+          permitted: boolean
+          restricted: boolean
           guide_number: string | null
           issued_at: string | null
           expires_at: string
@@ -205,8 +207,10 @@ export type Database = {
         }
         Insert: {
           id?: string
-          firearm_id: string
-          destination_address: string
+          member_id: string
+          address: string
+          permitted?: boolean
+          restricted?: boolean
           guide_number?: string | null
           issued_at?: string | null
           expires_at?: string
@@ -216,8 +220,10 @@ export type Database = {
         }
         Update: {
           id?: string
-          firearm_id?: string
-          destination_address?: string
+          member_id?: string
+          address?: string
+          permitted?: boolean
+          restricted?: boolean
           guide_number?: string | null
           issued_at?: string | null
           expires_at?: string

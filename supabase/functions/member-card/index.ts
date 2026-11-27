@@ -39,17 +39,24 @@ Deno.serve(async (req) => {
     if (error) throw error;
     if (!member) return json({ error: "not_found" }, 404);
 
-    const [{ data: firearms, error: fErr }, { data: options, error: oErr }, { data: settings }] = await Promise.all([
+    const [{ data: firearms, error: fErr }, { data: guides, error: gErr }, { data: options, error: oErr }, { data: settings }] = await Promise.all([
       admin
         .from("member_firearms")
-        .select("id, type, brand, model, sigma_number, caliber, restriction, sigma_expires_at, position, traffic_guides(expires_at, issued_at)")
+        .select("id, type, brand, model, sigma_number, caliber, restriction, sigma_expires_at, position")
         .eq("member_id", member.id)
         .order("position")
         .order("created_at"),
+      // Só uso e validade: o endereço da GT é o endereço do filiado
+      admin
+        .from("traffic_guides")
+        .select("permitted, restricted, expires_at, issued_at")
+        .eq("member_id", member.id)
+        .order("expires_at"),
       admin.from("option_lists").select("category, value, label").in("category", ["firearm_type", "brand", "caliber"]),
       admin.from("card_settings").select("club_name, club_cr").eq("id", 1).maybeSingle(),
     ]);
     if (fErr) throw fErr;
+    if (gErr) throw gErr;
     if (oErr) throw oErr;
 
     const label = (category: string, value: string | null) =>
@@ -79,11 +86,8 @@ Deno.serve(async (req) => {
         caliber: label("caliber", f.caliber),
         restriction: f.restriction,
         sigma_expires_at: f.sigma_expires_at,
-        // Só validade: o destino da GT pode ser o endereço do filiado
-        traffic_guides: ((f.traffic_guides ?? []) as { expires_at: string; issued_at: string | null }[])
-          .map((g) => ({ expires_at: g.expires_at, issued_at: g.issued_at }))
-          .sort((a, b) => a.expires_at.localeCompare(b.expires_at)),
       })),
+      traffic_guides: guides ?? [],
       checked_at: new Date().toISOString(),
     });
   } catch (e) {
