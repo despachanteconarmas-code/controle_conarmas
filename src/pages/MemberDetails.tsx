@@ -9,6 +9,7 @@ import { RenewDialog } from "@/components/members/RenewDialog";
 import { FirearmDialog } from "@/components/members/FirearmDialog";
 import { GuideDialog } from "@/components/members/GuideDialog";
 import { GuideList } from "@/components/members/GuideList";
+import { removeGuideFiles } from "@/lib/guideFiles";
 import { MemberPhoto } from "@/components/members/MemberPhoto";
 import { CardPdfButton } from "@/components/members/CardPdfButton";
 import { Button } from "@/components/ui/button";
@@ -173,12 +174,14 @@ export default function MemberDetails() {
         const { error } = await supabase.from("members").delete().eq("id", id!);
         if (error) throw error;
         if (member?.photo_path) await supabase.storage.from("member-photos").remove([member.photo_path]);
+        await removeGuideFiles(supabase, guides.map((g) => g.file_path));
       } else if (c.kind === "firearm") {
         const { error } = await supabase.from("member_firearms").delete().eq("id", c.item.id);
         if (error) throw error;
       } else if (c.kind === "guide") {
         const { error } = await supabase.from("traffic_guides").delete().eq("id", c.item.id);
         if (error) throw error;
+        await removeGuideFiles(supabase, [c.item.file_path]);
       } else if (c.kind === "qr") {
         const { error } = await supabase.rpc("regenerate_verify_token", { p_member_id: id! });
         if (error) throw error;

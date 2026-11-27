@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as panelClient } from "@/integrations/supabase/client";
+import type { DbClient } from "@/lib/guideFiles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateInput } from "@/components/ui/date-input";
@@ -31,6 +32,8 @@ interface FirearmDialogProps {
    * painel, que permite incluir e remover opções.
    */
   readOnlyOptions?: { firearm_type: SimpleOption[]; brand: SimpleOption[]; caliber: SimpleOption[] };
+  /** Cliente com a sessão de quem usa a tela. No app do filiado, o da carteira. */
+  client?: DbClient;
   onSaved?: () => void;
 }
 
@@ -44,7 +47,8 @@ const empty = {
   sigma_expires_at: "",
 };
 
-export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosition, readOnlyOptions, onSaved }: FirearmDialogProps) {
+export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosition, readOnlyOptions, client, onSaved }: FirearmDialogProps) {
+  const supabase = client ?? panelClient;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(empty);

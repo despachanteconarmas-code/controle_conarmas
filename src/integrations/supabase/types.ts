@@ -199,6 +199,9 @@ export type Database = {
           permitted: boolean
           restricted: boolean
           guide_number: string | null
+          file_path: string | null
+          file_name: string | null
+          file_type: string | null
           issued_at: string | null
           expires_at: string
           created_at: string
@@ -212,6 +215,9 @@ export type Database = {
           permitted?: boolean
           restricted?: boolean
           guide_number?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
           issued_at?: string | null
           expires_at?: string
           created_at?: string
@@ -225,6 +231,9 @@ export type Database = {
           permitted?: boolean
           restricted?: boolean
           guide_number?: string | null
+          file_path?: string | null
+          file_name?: string | null
+          file_type?: string | null
           issued_at?: string | null
           expires_at?: string
           created_at?: string

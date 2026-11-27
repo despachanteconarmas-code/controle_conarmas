@@ -15,6 +15,7 @@ import {
 import { FirearmDialog } from "@/components/members/FirearmDialog";
 import { GuideDialog } from "@/components/members/GuideDialog";
 import { GuideList } from "@/components/members/GuideList";
+import { removeGuideFiles } from "@/lib/guideFiles";
 import { StatusBadge } from "@/components/members/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 import { MemberFirearm, restrictionLabels, Restriction, TrafficGuide } from "@/lib/members";
@@ -45,6 +46,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
       const table = c.kind === "firearm" ? "member_firearms" : "traffic_guides";
       const { error } = await supabase.from(table).delete().eq("id", c.item.id);
       if (error) throw error;
+      if (c.kind === "guide") await removeGuideFiles(supabase, [c.item.file_path]);
     },
     onSuccess: (_, c) => {
       toast({ title: c.kind === "firearm" ? "Arma excluída" : "GT excluída" });
@@ -116,6 +118,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
           onEdit={(g) => setGuideDialog({ open: true, item: g })}
           onDelete={(g) => setConfirm({ kind: "guide", item: g })}
           emptyText="Nenhuma GT cadastrada. Se você tiver dois endereços de acervo, cadastre uma GT para cada."
+          client={supabase}
         />
       </div>
 
@@ -126,6 +129,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
         firearm={firearmDialog.item}
         nextPosition={firearms.length + 1}
         readOnlyOptions={readOnlyOptions}
+        client={supabase}
         onSaved={refresh}
       />
       <GuideDialog
@@ -134,6 +138,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
         onOpenChange={(open) => setGuideDialog((s) => ({ ...s, open }))}
         guide={guideDialog.item}
         existingCount={guides.length}
+        client={supabase}
         onSaved={refresh}
       />
 
