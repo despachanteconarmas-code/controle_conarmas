@@ -8,10 +8,11 @@ import { CarteiraData, labelOf } from "../data";
 import { Plus } from "lucide-react";
 
 /** Uma linha do livro: rótulo pequeno, valor grande para copiar à mão */
-function Row({ n, label, value, expiresAt }: { n: number; label: string; value: string; expiresAt?: string | null }) {
+function Row({ n, label, value, expiresAt }: { n?: number; label: string; value: string; expiresAt?: string | null }) {
   return (
     <div className="flex items-start gap-3 border-b py-3 last:border-b-0">
-      <span className="mt-1 w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{n}</span>
+      {/* Sem número: dado extra, fora das colunas do livro */}
+      <span className="mt-1 w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{n ?? ""}</span>
       <div className="min-w-0 flex-1">
         <p className="text-xs uppercase tracking-wide text-gold">{label}</p>
         <p className="break-words text-2xl font-bold tabular-nums leading-tight">{value || "—"}</p>
@@ -70,6 +71,7 @@ export default function BookPage({ data }: { data: CarteiraData }) {
               label="Tipo"
               value={firearm.restriction ? restrictionLabels[firearm.restriction as Restriction] : ""}
             />
+            <Row label="Nº de série" value={firearm.serial_number ?? ""} />
           </>
         ) : (
           <div className="py-5 text-center">

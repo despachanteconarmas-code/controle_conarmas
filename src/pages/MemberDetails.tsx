@@ -362,6 +362,7 @@ export default function MemberDetails() {
                         </p>
                         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                           <span>Calibre: <span className="text-foreground">{caliber.getLabel(f.caliber) || "—"}</span></span>
+                          <span>Nº de série: <span className="text-foreground tabular-nums">{f.serial_number || "—"}</span></span>
                           <span>SIGMA: <span className="text-foreground tabular-nums">{f.sigma_number || "—"}</span></span>
                           {f.restriction && (
                             <Badge variant={f.restriction === "RESTRITO" ? "destructive" : "secondary"}>

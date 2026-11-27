@@ -41,6 +41,7 @@ const empty = {
   type: "",
   brand: "",
   model: "",
+  serial_number: "",
   sigma_number: "",
   caliber: "",
   restriction: "" as Restriction | "",
@@ -62,6 +63,7 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
             type: firearm.type ?? "",
             brand: firearm.brand ?? "",
             model: firearm.model ?? "",
+            serial_number: firearm.serial_number ?? "",
             sigma_number: firearm.sigma_number ?? "",
             caliber: firearm.caliber ?? "",
             restriction: (firearm.restriction as Restriction) ?? "",
@@ -77,6 +79,7 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
         type: form.type || null,
         brand: form.brand || null,
         model: form.model.trim() || null,
+        serial_number: form.serial_number.trim().toUpperCase() || null,
         sigma_number: form.sigma_number.trim() || null,
         caliber: form.caliber || null,
         restriction: form.restriction || null,
@@ -135,9 +138,23 @@ export function FirearmDialog({ memberId, open, onOpenChange, firearm, nextPosit
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="fa-model">Modelo *</Label>
-            <Input id="fa-model" value={form.model} onChange={(e) => set("model")(e.target.value)} placeholder="G2C, RT 82..." />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="fa-model">Modelo *</Label>
+              <Input id="fa-model" value={form.model} onChange={(e) => set("model")(e.target.value)} placeholder="G2C, RT 82..." />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fa-serial">Nº de série</Label>
+              <Input
+                id="fa-serial"
+                value={form.serial_number}
+                onChange={(e) => set("serial_number")(e.target.value)}
+                placeholder="Gravado na arma"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

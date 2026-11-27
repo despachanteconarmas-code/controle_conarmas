@@ -151,6 +151,7 @@ export type Database = {
           brand: string | null
           model: string | null
           sigma_number: string | null
+          serial_number: string | null
           caliber: string | null
           restriction: string | null
           sigma_expires_at: string | null
@@ -166,6 +167,7 @@ export type Database = {
           brand?: string | null
           model?: string | null
           sigma_number?: string | null
+          serial_number?: string | null
           caliber?: string | null
           restriction?: string | null
           sigma_expires_at?: string | null
@@ -181,6 +183,7 @@ export type Database = {
           brand?: string | null
           model?: string | null
           sigma_number?: string | null
+          serial_number?: string | null
           caliber?: string | null
           restriction?: string | null
           sigma_expires_at?: string | null

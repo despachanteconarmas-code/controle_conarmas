@@ -82,6 +82,7 @@ export default function FirearmsPage({ data, refresh }: { data: CarteiraData; re
               <p className="mt-0.5 text-sm text-muted-foreground">
                 {labelOf(options, "caliber", f.caliber) || "Calibre não informado"} · SIGMA {f.sigma_number || "—"}
               </p>
+              <p className="text-sm text-muted-foreground">Nº de série {f.serial_number || "—"}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {f.restriction && (
                   <Badge variant={f.restriction === "RESTRITO" ? "destructive" : "secondary"}>
